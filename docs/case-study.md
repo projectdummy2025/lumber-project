@@ -1,46 +1,46 @@
-# Studi Kasus Operasional: Dilema Skalabilitas & Risiko Keterlambatan Ekspor pada Industri Mebel Menengah
+# Operational Case Study: Scalability Dilemma & Export Delay Risks in a Mid-Sized Furniture Factory
 
-## 1. Latar Belakang & Problematika Bisnis
+## 1. Background & Business Problem
 
-### Profil Pabrik & Situasi Lapangan
-*Djati Karya Furniture* adalah industri mebel skala menengah yang memproduksi furnitur kayu jati dan mahoni untuk pasar ekspor. Saat ini pabrik mengoperasikan **Production Management System (PMS)** berbasis database relasional untuk mencatat data bahan baku, Bill of Materials (BOM), kapasitas lini kerja, dan status Work Order (WO).
+### Factory Profile & Field Situation
+*Djati Karya Furniture* is a mid-sized manufacturing company producing teak and mahogany furniture for the export market. The factory currently operates a relational database-based **Production Management System (PMS)** to record raw material data, Bill of Materials (BOM), workstation capacities, and Work Order (WO) status.
 
-Pabrik baru saja menerima penawaran pesanan ekspor dari pembeli asal Australia untuk **100 Set Meja Makan Jati (Set Meja + 6 Kursi)** dengan nilai kontrak tinggi. Namun, pesanan ini mensyaratkan **tenggat pengiriman ketat dalam 40 hari**.
+The factory has just received a lucrative export order offer from an Australian buyer for **100 Sets of Teak Dining Tables (Table + 6 Chairs)**. However, this order requires a **strict 40-day delivery deadline**.
 
 ```
                            ┌──────────────────────────────────────────────┐
-                           │   Peluang Order Ekspor: 100 Set Meja Makan   │
-                           │   Tenggat Pengiriman: 40 Hari                │
+                           │   Export Order Opportunity: 100 Dining Sets  │
+                           │   Delivery Deadline: 40 Days                 │
                            └──────────────────────┬───────────────────────┘
                                                   │
                                                   ▼
                          ┌──────────────────────────────────────────────────┐
-                         │       Dilema Utama Pemilik Pabrik (Owner)        │
+                         │       The Factory Owner's Core Dilemma           │
                          ├──────────────────────────────────────────────────┤
-                         │ 1. Apakah stok kayu mentah cukup (setelah limbah)│
-                         │ 2. Di mana titik kemacetan (bottleneck) lantai? │
-                         │ 3. Bagaimana menghindari penalti keterlambatan?  │
+                         │ 1. Is the raw timber stock sufficient post-yield?│
+                         │ 2. Where are the shop floor bottlenecks?         │
+                         │ 3. How to avoid delivery delay penalties?        │
                          └──────────────────────────────────────────────────┘
 ```
 
 ---
 
-### Realita Fizikal Manufaktur Kayu
-Pengambilan keputusan pada pesanan ini tidak dapat dilakukan hanya dengan intuisi atau estimasi kasar karena melibatkan batasan operasional yang saling terkait:
+### Physical Realities of Wood Manufacturing
+Decisions on this order cannot rely solely on intuition or rough estimates because it involves interconnected operational constraints:
 
-1. **Rendemen Kayu (*Wood Yield Recovery Rate*):** Log kayu jati mentah tidak $100\%$ menjadi furnitur. Setelah pembelahan, pembuangan cacat alami (mata kayu, retak), dan pengetetan dimensi, hanya **$45\%$** volume kayu mentah yang menjadi komponen bersih. Sisanya menjadi limbah/afval.
-2. **Jeda Pengeringan Oven (*Kiln Drying Lag*):** Log kayu mentah berkadar air tinggi ($\approx 26\%$) wajib melalui siklus pengeringan oven selama 12 hari agar kadar air turun ke standar ekspor ($11\%-12\%$). Pemotongan mesin tidak dapat dilakukan sebelum proses pengeringan selesai.
-3. **Kapasitas Pertukangan & Perakitan (*Joinery Bottleneck*):** Perakitan konstruksi purus dan lubang (*mortise & tenon*) membutuhkan jam kerja tukang kayu yang presisi. Stasiun perakitan saat ini beroperasi pada 1 shift dengan keterpakaian tinggi untuk pesanan berjalan.
-4. **Risiko & Biaya Keterlambatan:** Memaksa lembur tanpa perhitungan presisi memicu pembengkakan biaya upah 1.5x dan risiko kelelahan kerja. Sebaliknya, terlambat kirim menyebabkan penalti kontrak *demurrage* di pelabuhan.
+1. **Wood Yield Recovery Rate:** Raw teak logs do not convert 100% into furniture. After cutting, removing natural defects (knots, cracks), and dimensional sizing, only **45%** of the raw wood volume becomes clean components. The rest becomes waste.
+2. **Kiln Drying Lag:** Raw logs with high moisture content ($\approx 26\%$) must go through a 12-day kiln drying cycle to reach export standards ($11\%-12\%$). Machine cutting cannot commence until drying is complete.
+3. **Joinery & Assembly Bottleneck:** Assembling mortise & tenon joints requires precise carpentry hours. The assembly station currently operates on a single shift with high utilization from existing orders.
+4. **Delay Risks & Costs:** Forcing overtime without precise calculation causes labor costs to balloon by 1.5x and increases fatigue risk. Conversely, missing the deadline incurs contract *demurrage* penalties at the port.
 
 ---
 
-## 2. Struktur Data Produksi (Production Management System)
+## 2. Production Data Structure (Production Management System)
 
-Untuk mengelola operasional sehari-hari, pabrik mengandalkan skema basis data relasional berikut:
+To manage daily operations, the factory relies on the following relational database schema:
 
 ```sql
--- 1. Master Produk
+-- 1. Product Master
 CREATE TABLE products (
     id INT PRIMARY KEY AUTO_INCREMENT,
     sku VARCHAR(30) UNIQUE NOT NULL,
@@ -49,7 +49,7 @@ CREATE TABLE products (
     net_volume_m3 DECIMAL(6,3) NOT NULL
 );
 
--- 2. Bill of Materials (BOM) & Standar Jam Kerja
+-- 2. Bill of Materials (BOM) & Standard Work Hours
 CREATE TABLE product_bom (
     id INT PRIMARY KEY AUTO_INCREMENT,
     product_id INT NOT NULL,
@@ -62,7 +62,7 @@ CREATE TABLE product_bom (
     FOREIGN KEY (product_id) REFERENCES products(id)
 );
 
--- 3. Stok Bahan Baku & Rendemen
+-- 3. Raw Material Stock & Yield
 CREATE TABLE inventory_materials (
     id INT PRIMARY KEY AUTO_INCREMENT,
     material_code VARCHAR(30) UNIQUE NOT NULL,
@@ -74,7 +74,7 @@ CREATE TABLE inventory_materials (
     avg_yield_pct DECIMAL(4,1) DEFAULT 45.0
 );
 
--- 4. Stasiun Kerja & Kapasitas Jam Kerja
+-- 4. Workstations & Capacity Hours
 CREATE TABLE workstations (
     id INT PRIMARY KEY AUTO_INCREMENT,
     station_code VARCHAR(20) UNIQUE NOT NULL,
@@ -84,7 +84,7 @@ CREATE TABLE workstations (
     current_load_hours DECIMAL(6,1) DEFAULT 0.0
 );
 
--- 5. Status Pesanan Kerja (Work Orders)
+-- 5. Work Order Status
 CREATE TABLE work_orders (
     id INT PRIMARY KEY AUTO_INCREMENT,
     wo_number VARCHAR(30) UNIQUE NOT NULL,
@@ -97,55 +97,55 @@ CREATE TABLE work_orders (
 );
 ```
 
-### Kondisi Data Saat Ini (Initial State)
+### Initial Data State
 ```sql
 INSERT INTO products (id, sku, name, category, net_volume_m3) VALUES
-(1, 'SET-DINING-01', 'Set Meja Makan Jati 6 Kursi', 'Dining Set', 0.280);
+(1, 'SET-DINING-01', 'Teak Dining Set (Table + 6 Chairs)', 'Dining Set', 0.280);
 
 INSERT INTO product_bom (product_id, component_name, wood_type, net_vol_m3, std_cnc_hours, std_assembly_hours, std_finishing_hours) VALUES
-(1, 'Complete Set', 'Jati', 0.280, 3.5, 12.0, 6.0);
+(1, 'Complete Set', 'Teak', 0.280, 3.5, 12.0, 6.0);
 
 INSERT INTO inventory_materials (material_code, material_name, material_type, stock_quantity, unit, moisture_pct, avg_yield_pct) VALUES
-('MAT-TEAK-LOG', 'Log Kayu Jati Gelondongan', 'Timber Log', 90.00, 'm3', 26.0, 45.0);
+('MAT-TEAK-LOG', 'Raw Teak Logs', 'Timber Log', 90.00, 'm3', 26.0, 45.0);
 
 INSERT INTO workstations (station_code, station_name, active_units, daily_capacity_hours, current_load_hours) VALUES
-('STN-KILN', 'Oven Pengeringan', 2, 48.0, 40.8),
-('STN-CNC', 'Mesin CNC Router', 2, 32.0, 24.9),
-('STN-ASSY', 'Perakitan & Pertukangan', 10, 80.0, 70.4),
-('STN-FINISH', 'Lini Finishing', 1, 8.0, 4.8);
+('STN-KILN', 'Kiln Dryer', 2, 48.0, 40.8),
+('STN-CNC', 'CNC Router Machine', 2, 32.0, 24.9),
+('STN-ASSY', 'Joinery & Assembly', 10, 80.0, 70.4),
+('STN-FINISH', 'Finishing Line', 1, 8.0, 4.8);
 ```
 
 ---
 
-## 3. Kompleksitas Analisis & Hambatan Perhitungan Manual
+## 3. Analysis Complexity & Manual Calculation Barriers
 
-Untuk menjawab apakah pesanan 100 set meja makan dapat diterima, manajer produksi harus melakukan analisis silang yang rumit:
+To answer whether the 100 dining set order can be accepted, the production manager must perform a complex cross-analysis:
 
-1. **Kalkulasi Kebutuhan Kayu Baku Mentah:**
-   - Volume komponen bersih per set = $0.280\text{ m}^3$.
-   - Kebutuhan bersih 100 set = $100 \times 0.280 = 28.0\text{ m}^3$.
-   - Dengan rendemen kayu jati $45\%$, kebutuhan kayu mentah aktual = $\frac{28.0\text{ m}^3}{0.45} = \mathbf{62.22\text{ m}^3}$.
-   - Stok kayu mentah di gudang saat ini adalah $90.00\text{ m}^3$ (Secara volume mencukupi, tetapi butuh pengeringan 12 hari).
+1. **Raw Timber Requirement Calculation:**
+   - Clean component volume per set = $0.280\text{ m}^3$.
+   - Net requirement for 100 sets = $100 \times 0.280 = 28.0\text{ m}^3$.
+   - Factoring in the $45\%$ yield rate, actual raw timber required = $\frac{28.0\text{ m}^3}{0.45} = \mathbf{62.22\text{ m}^3}$.
+   - Current warehouse raw stock is $90.00\text{ m}^3$ (sufficient by volume, but requires 12 days of kiln drying).
 
-2. **Kalkulasi Beban Jam Kerja & Bottleneck:**
-   - Kebutuhan perakitan = $100 \text{ unit} \times 12.0 \text{ jam} = \mathbf{1.200 \text{ jam}}$.
-   - Kapasitas sisa stasiun perakitan (`STN-ASSY`) setelah terpakai pesanan eksisting = $80.0 - 70.4 = \mathbf{9.6 \text{ jam/hari}}$.
-   - Waktu pengerjaan perakitan internal tanpa intervensi = $\frac{1.200 \text{ jam}}{9.6 \text{ jam/hari}} = \mathbf{125 \text{ hari}}$.
-   - **Masalah Utama:** Pengerjaan internal murni dipastikan terlambat 85 hari dari batas 40 hari.
+2. **Work Hour Load & Bottleneck Calculation:**
+   - Assembly requirement = $100 \text{ units} \times 12.0 \text{ hours} = \mathbf{1,200 \text{ hours}}$.
+   - Remaining capacity at the assembly station (`STN-ASSY`) after existing orders = $80.0 - 70.4 = \mathbf{9.6 \text{ hours/day}}$.
+   - Internal assembly execution time without intervention = $\frac{1,200 \text{ hours}}{9.6 \text{ hours/day}} = \mathbf{125 \text{ days}}$.
+   - **Main Issue:** Purely internal execution is guaranteed to be delayed by 85 days past the 40-day deadline.
 
-3. **Trade-off Keputusan Strategis:**
-   - *Opsi 1 (Lembur Internal 2 Shift):* Menambah shift malam untuk perakitan. Namun biaya lembur membengkak dan kapasitas tetap mepet.
-   - *Opsi 2 (Sub-kontrak / Subcon Perakitan Mentah):* Mencarter pertukangan mentah ke pengrajin mitra lokal untuk memangkas waktu perakitan internal menjadi 8 hari, sementara pengecatan finishing tetap dilakukan internal untuk menjaga standar mutu.
+3. **Strategic Decision Trade-offs:**
+   - *Option 1 (Internal 2-Shift Overtime):* Add a night shift for assembly. However, overtime costs balloon and capacity remains tight.
+   - *Option 2 (Raw Assembly Sub-contracting):* Outsource raw carpentry to local artisan partners, cutting internal assembly time to 8 days while keeping spray finishing in-house to maintain quality standards.
 
 ---
 
-## 4. Solusi Organik: Integrasi AI Operational Consultant
+## 4. Organic Solution: Integration of AI Operational Consultant
 
-Melihat rumitnya kombinasi variabel (BOM, faktor rendemen, jadwal oven, jam stasiun kerja, dan evaluasi biaya subcon), pemilik pabrik membutuhkan **asisten pembuat keputusan operasional (AI Operational Consultant)** yang dapat langsung terhubung ke database PMS.
+Given the complex combination of variables (BOM, yield factors, oven schedules, workstation hours, and subcon cost evaluation), the factory owner requires an **AI Operational Consultant** capable of connecting directly to the PMS database.
 
-### Peran & Alur Kerja AI Consultant dalam Sistem
+### Role & Workflow of the AI Consultant
 
-AI Consultant bertindak sebagai *Co-Pilot Operasional* yang melakukan query data relasional secara dinamis, melakukan simulasi matematik non-linear, dan memberikan rekomendasi berbasis data riil:
+The AI Consultant acts as an *Operational Co-Pilot*, executing relational data queries dynamically, performing non-linear mathematical simulations, and providing data-backed recommendations:
 
 ```
 ┌────────────────────────┐      SQL Queries (DML)      ┌────────────────────────┐
@@ -157,28 +157,28 @@ AI Consultant bertindak sebagai *Co-Pilot Operasional* yang melakukan query data
             │
             ▼
 ┌────────────────────────────────────────────────────────────────────────┐
-│  Rekomendasi Keputusan Berbasis Data untuk Pemilik Pabrik:              │
+│  Data-Driven Decision Recommendations for Factory Owner:               │
 │                                                                        │
-│  1. Alokasi Bahan: Gunakan 62.22 m3 log jati, jadwalkan oven 12 hari.  │
-│  2. Solusi Bottleneck: Gunakan Opsi Subcon Perakitan Mentah (8 Hari).  │
-│  3. Kepastian Waktu: Total waktu produksi 36 Hari (Selesai sebelum     │
-│     tenggat 40 Hari, dengan buffer aman 4 Hari).                        │
+│  1. Material: Allocate 62.22 m3 of teak logs, schedule 12-day drying. │
+│  2. Bottleneck: Sub-contract raw assembly to a local partner (8 days). │
+│  3. Timeline: Total 36 days — completed before the 40-day deadline     │
+│     with a safe 4-day buffer.                                          │
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Contoh Interaksi Query & Simulasi Database oleh AI Agent
+### Example DML Query Interaction
 
-Saat diminta menganalisis kelayakan pesanan, AI Consultant secara mandiri menjalankan query DML berikut ke database PMS:
+When asked to analyze order feasibility, the AI Consultant autonomously executes the following queries against the PMS database:
 
 ```sql
--- 1. AI memeriksa BOM & Stok Bahan Baku
+-- 1. AI checks BOM & Raw Material Stock
 SELECT p.name, b.net_vol_m3, i.stock_quantity, i.avg_yield_pct
 FROM products p
 JOIN product_bom b ON p.id = b.product_id
 JOIN inventory_materials i ON i.material_code = 'MAT-TEAK-LOG'
 WHERE p.sku = 'SET-DINING-01';
 
--- 2. AI mengeksekusi simulasi pendaftaran WO dan alokasi stok setelah keputusan disetujui
+-- 2. AI registers a new Work Order and allocates stock upon decision approval
 INSERT INTO work_orders (wo_number, client_name, product_id, quantity, due_date, status)
 VALUES ('WO-2026-EXP01', 'Australia Living Corp', 1, 100, DATE_ADD(CURRENT_DATE(), INTERVAL 40 DAY), 'IN_PROCESS');
 
@@ -189,6 +189,6 @@ WHERE material_code = 'MAT-TEAK-LOG';
 
 ---
 
-## 5. Kesimpulan & Nilai Tambah
+## 5. Conclusion
 
-Dengan menempatkan **problematika operasional industri mebel sebagai fokus utama**, penerapan AI Consultant tidak terasa dipaksakan. AI hadir bukan sebagai gimmick, melainkan sebagai solusi nyata atas rumitnya kalkulasi rendemen kayu, deteksi *bottleneck* kapasitas pertukangan, dan pengambilan keputusan *sub-kontrak vs lembur* bagi manufaktur skala menengah.
+By placing the **operational problems of the furniture industry as the primary focus**, the AI Consultant is introduced naturally rather than being forced into the narrative. The AI serves as a real solution to the complex calculations of timber yield, carpentry bottleneck detection, and sub-contracting versus overtime decisions for mid-sized manufacturers.
