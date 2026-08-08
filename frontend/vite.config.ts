@@ -3,6 +3,7 @@ import react, { reactCompilerPreset } from "@vitejs/plugin-react";
 import babel from "@rolldown/plugin-babel";
 import path from "path";
 import tailwindcss from "@tailwindcss/vite";
+import { viteDatabaseApiPlugin } from "./server/apiPlugin";
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -10,10 +11,16 @@ export default defineConfig({
     react(),
     tailwindcss(),
     babel({ presets: [reactCompilerPreset()] }),
+    viteDatabaseApiPlugin(),
   ],
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "./src"),
+    },
+  },
+  server: {
+    proxy: {
+      "/api/chat": "http://127.0.0.1:8000",
     },
   },
 });
