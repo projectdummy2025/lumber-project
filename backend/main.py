@@ -1,7 +1,11 @@
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import List, Optional
+
+from agent import solve
 
 app = FastAPI(title="AI Operational Consultant API", version="1.0.0")
 
@@ -36,33 +40,34 @@ def read_root():
 
 @app.post("/api/chat", response_model=ChatResponse)
 def chat_with_agent(request: ChatRequest):
-    """
-    Main endpoint for AI communication.
-    This is a dummy/mock implementation which will later be replaced
-    with actual ReAct Agent + SQL Execution logic.
-    """
-    
-    # --- MOCK RESPONSE: To be replaced during Day 2 & 3 development ---
-    mock_reply = "Based on system data calculations, the current stock of raw Teak is sufficient (27.78 m3 remaining). However, the assembly line is facing a severe bottleneck. My recommendation is to use the raw assembly sub-contracting option."
-    
-    mock_logs = [
-        AgentLog(
-            action="execute_sql", 
-            query="SELECT stock_quantity, avg_yield_pct FROM inventory_materials WHERE material_code='MAT-TEAK-LOG'",
-            observation="stock_quantity: 90.00, avg_yield_pct: 45.0"
-        ),
-        AgentLog(
-            action="math_calculation", 
-            query="Calculate (100 units * 0.280 m3) / 0.45",
-            observation="Required: 62.22 m3. Stock is sufficient."
+    """Main endpoint for AI communication — runs the ReAct agent loop."""
+    missing = [k for k in ("LLM_BASE_URL", "LLM_MODEL") if not os.environ.get(k)]
+    if missing:
+        return JSONResponse(
+            status_code=503,
+            content={"status": "error", "reply": f"Missing env vars: {', '.join(missing)}", "agent_logs": []},
         )
-    ]
-    
-    return ChatResponse(
-        status="success",
-        reply=mock_reply,
-        agent_logs=mock_logs
-    )
+
+    try:
+        reply, logs = solve(request.message)
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={"status": "error", "reply": f"Agent error: {e}", "agent_logs": []},
+        )
+
+    # Convert agent logs to API contract format
+    formatted = []
+    for entry in logs:
+        if entry["role"] == "finalize":
+            continue
+        formatted.append(AgentLog(
+            action=entry["role"],
+            query=entry["content"][:200] if entry["role"] == "tool" else None,
+            observation=entry["content"][:400] if entry["role"] == "observation" else None,
+        ))
+    formatted = [f for f in formatted if f.query or f.observation]
+    return ChatResponse(status="success", reply=reply, agent_logs=formatted)
 
 if __name__ == "__main__":
     import uvicorn
