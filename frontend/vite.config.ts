@@ -3,7 +3,7 @@ import react, { reactCompilerPreset } from "@vitejs/plugin-react";
 import babel from "@rolldown/plugin-babel";
 import path from "path";
 import tailwindcss from "@tailwindcss/vite";
-import { viteDatabaseApiPlugin } from "./server/apiPlugin";
+import { viteDatabaseApiPlugin } from "./server/apiPlugin.js";
 
 // https://vite.dev/config/
 export default defineConfig({
