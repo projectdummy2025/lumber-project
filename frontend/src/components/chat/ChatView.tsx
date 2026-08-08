@@ -103,10 +103,45 @@ export const ChatView = ({
     <div className="flex h-full w-full flex-col items-center justify-center bg-[#222] p-8 text-white">
       <div className="flex h-[90%] w-7/12 flex-col items-center justify-between overflow-hidden rounded-xl">
         {messages.length < 1 && (
-          <div className="w-10/12 my-auto">
+          <div className="w-10/12 my-auto flex flex-col items-center">
             <h1 className="text-center text-6xl leading-tight text-white/80">
               Halo Alvin, Ada Yang Bisa Saya Bantu?
             </h1>
+
+            {/* Prompt Templates */}
+            <div className="mt-12 grid w-full grid-cols-2 gap-4">
+              <button
+                onClick={() => handleSendMessage("Analisis Pesanan 100 Meja Teak (SET-DINING-01) selesai dalam 40 hari.")}
+                className="flex flex-col gap-1 rounded-xl border border-white/10 bg-white/5 p-4 text-left transition-colors hover:bg-white/10"
+              >
+                <span className="font-semibold text-gray-200">Analisis Order Baru</span>
+                <span className="text-xs text-gray-400">100 Meja Teak (SET-DINING-01) selesai dalam 40 hari.</span>
+              </button>
+
+              <button
+                onClick={() => handleSendMessage("Cek ketersediaan stok raw material teak dan yield rate.")}
+                className="flex flex-col gap-1 rounded-xl border border-white/10 bg-white/5 p-4 text-left transition-colors hover:bg-white/10"
+              >
+                <span className="font-semibold text-gray-200">Cek Stok Timber</span>
+                <span className="text-xs text-gray-400">Ketersediaan raw material teak & yield rate rata-rata.</span>
+              </button>
+
+              <button
+                onClick={() => handleSendMessage("Apakah ada workstation yang mengalami bottleneck / overload kapasitas saat ini?")}
+                className="flex flex-col gap-1 rounded-xl border border-white/10 bg-white/5 p-4 text-left transition-colors hover:bg-white/10"
+              >
+                <span className="font-semibold text-gray-200">Deteksi Bottleneck</span>
+                <span className="text-xs text-gray-400">Identifikasi kapasitas workstation yang overload.</span>
+              </button>
+
+              <button
+                onClick={() => handleSendMessage("Bandingkan biaya opsi subkontrak vs lembur (overtime) untuk mengatasi backlog.")}
+                className="flex flex-col gap-1 rounded-xl border border-white/10 bg-white/5 p-4 text-left transition-colors hover:bg-white/10"
+              >
+                <span className="font-semibold text-gray-200">Hitung Solusi Operasional</span>
+                <span className="text-xs text-gray-400">Komparasi cost opsi subkontrak vs overtime.</span>
+              </button>
+            </div>
           </div>
         )}
 
