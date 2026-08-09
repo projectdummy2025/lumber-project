@@ -127,15 +127,15 @@ To answer whether the 100 dining set order can be accepted, the production manag
    - Factoring in the $45\%$ yield rate, actual raw timber required = $\frac{28.0\text{ m}^3}{0.45} = \mathbf{62.22\text{ m}^3}$.
    - Current warehouse raw stock is $90.00\text{ m}^3$ (sufficient by volume, but requires 12 days of kiln drying).
 
-2. **Work Hour Load & Bottleneck Calculation:**
-   - Assembly requirement = $100 \text{ units} \times 12.0 \text{ hours} = \mathbf{1,200 \text{ hours}}$.
-   - Remaining capacity at the assembly station (`STN-ASSY`) after existing orders = $80.0 - 70.4 = \mathbf{9.6 \text{ hours/day}}$.
-   - Internal assembly execution time without intervention = $\frac{1,200 \text{ hours}}{9.6 \text{ hours/day}} = \mathbf{125 \text{ days}}$.
-   - **Main Issue:** Purely internal execution is guaranteed to be delayed by 85 days past the 40-day deadline.
+2. **Work Hour Load & Bottleneck Calculation (per station):**
+   - **CNC Cutting** — requirement = $100 \times 3.5 \text{ hours} = \mathbf{350 \text{ hours}}$. Free capacity at `STN-CNC` = $32.0 - 24.9 = \mathbf{7.1 \text{ hours/day}}$. Internal execution time = $\frac{350}{7.1} = \mathbf{49.3 \text{ days}}$.
+   - **Assembly** — requirement = $100 \times 12.0 \text{ hours} = \mathbf{1,200 \text{ hours}}$. Free capacity at `STN-ASSY` = $80.0 - 70.4 = \mathbf{9.6 \text{ hours/day}}$. Internal execution time = $\frac{1,200}{9.6} = \mathbf{125 \text{ days}}$.
+   - **Finishing** — requirement = $100 \times 6.0 \text{ hours} = \mathbf{600 \text{ hours}}$. Free capacity at `STN-FINISH` = $8.0 - 4.8 = \mathbf{3.2 \text{ hours/day}}$. Internal execution time = $\frac{600}{3.2} = \mathbf{187.5 \text{ days}}$.
+   - **Main Issue:** All three stages are severely bottlenecked internally. The tightest is Finishing (187.5 days), followed by Assembly (125 days) and CNC (49.3 days). After 12-day kiln drying, purely internal execution totals $\mathbf{373.8 \text{ days}}$ — far beyond the 40-day deadline.
 
 3. **Strategic Decision Trade-offs:**
    - *Option 1 (Internal 2-Shift Overtime):* Add a night shift for assembly. However, overtime costs balloon and capacity remains tight.
-   - *Option 2 (Raw Assembly Sub-contracting):* Outsource raw carpentry to local artisan partners, cutting internal assembly time to 8 days while keeping spray finishing in-house to maintain quality standards.
+   - *Option 2 (Full Outsource Path):* Outsource CNC cutting (8 days), raw carpentry assembly (8 days), and finishing (6 days) to partner shops. Internal processing is reduced to kiln drying only. Total lead time drops from 373.8 days to $\mathbf{12 + 8 + 8 + 6 = 34 \text{ days}}$, meeting the deadline with a 6-day buffer.
 
 ---
 
@@ -148,7 +148,7 @@ Given the complex combination of variables (BOM, yield factors, oven schedules, 
 The AI Consultant acts as an *Operational Co-Pilot*, executing relational data queries dynamically, performing non-linear mathematical simulations, and providing data-backed recommendations:
 
 ```
-┌────────────────────────┐      SQL Queries (DML)      ┌────────────────────────┐
+┌────────────────────────┐      SQL Queries (Read-Only) ┌────────────────────────┐
 │                        ├────────────────────────────►│                        │
 │  AI Operational        │                             │  Production Management │
 │  Consultant            │◄────────────────────────────┤  System (PMS Database) │
@@ -160,13 +160,13 @@ The AI Consultant acts as an *Operational Co-Pilot*, executing relational data q
 │  Data-Driven Decision Recommendations for Factory Owner:               │
 │                                                                        │
 │  1. Material: Allocate 62.22 m3 of teak logs, schedule 12-day drying. │
-│  2. Bottleneck: Sub-contract raw assembly to a local partner (8 days). │
-│  3. Timeline: Total 36 days — completed before the 40-day deadline     │
-│     with a safe 4-day buffer.                                          │
+│  2. Bottleneck: Outsource CNC, Assembly, and Finishing to partners.    │
+│  3. Timeline: Total 34 days — completed before the 40-day deadline    │
+│     with a safe 6-day buffer.                                          │
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Example DML Query Interaction
+### Example Query Interaction (Read-Only)
 
 When asked to analyze order feasibility, the AI Consultant autonomously executes the following queries against the PMS database:
 
@@ -178,14 +178,16 @@ JOIN product_bom b ON p.id = b.product_id
 JOIN inventory_materials i ON i.material_code = 'MAT-TEAK-LOG'
 WHERE p.sku = 'SET-DINING-01';
 
--- 2. AI registers a new Work Order and allocates stock upon decision approval
-INSERT INTO work_orders (wo_number, client_name, product_id, quantity, due_date, status)
-VALUES ('WO-2026-EXP01', 'Australia Living Corp', 1, 100, DATE_ADD(CURRENT_DATE(), INTERVAL 40 DAY), 'IN_PROCESS');
+-- 2. AI checks capacity of every workstation
+SELECT station_code, daily_capacity_hours, current_load_hours, active_units
+FROM workstations;
 
-UPDATE inventory_materials
-SET stock_quantity = stock_quantity - 62.22
-WHERE material_code = 'MAT-TEAK-LOG';
+-- 3. AI evaluates subcontracting options (external lead days vs internal overtime)
+SELECT option_code, option_name, unit_cost_per_set, lead_days
+FROM subcontracting_options;
 ```
+
+**Note:** The agent is **read-only** (SELECT/PRAGMA only) — it never mutates the PMS. Registering the work order and allocating stock ("WO-2026-EXP01" for 100 sets, deducting 62.22 m3 from inventory) is the manager's next step, executed in the PMS after the AI recommendation is approved.
 
 ---
 

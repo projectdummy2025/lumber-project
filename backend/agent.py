@@ -18,12 +18,12 @@ DB_PATH = Path(__file__).resolve().parent / "pms_dummy.db"
 MAX_STEPS = 6
 
 DB_SCHEMA = """Database tables (SQLite):
-- products(id, sku, name, category, net_volume_m3)
-- product_bom(id, product_id, component_name, wood_type, net_vol_m3, std_cnc_hours, std_assembly_hours, std_finishing_hours)
-- inventory_materials(id, material_code, material_name, material_type, stock_quantity, unit, moisture_pct, avg_yield_pct)
-- workstations(id, station_code, station_name, active_units, daily_capacity_hours, current_load_hours)
+- products(id, sku, name, category, net_volume_m3)  // net_volume_m3 = clean wood volume per set
+- product_bom(id, product_id, component_name, wood_type, net_vol_m3, std_cnc_hours, std_assembly_hours, std_finishing_hours)  // std_*_hours = standard hours PER SET at that stage
+- inventory_materials(id, material_code, material_name, material_type, stock_quantity, unit, moisture_pct, avg_yield_pct)  // avg_yield_pct = usable share of raw timber (45 means 45%)
+- workstations(id, station_code, station_name, active_units, daily_capacity_hours, current_load_hours)  // active_units = parallel machines; daily_capacity_hours = TOTAL capacity across ALL units; current_load_hours = committed load across all units
 - work_orders(id, wo_number, client_name, product_id, quantity, due_date, status)
-- subcontracting_options(id, option_code, option_name, unit_cost_per_set, lead_days, detail)
+- subcontracting_options(id, option_code, option_name, unit_cost_per_set, lead_days, detail)  // lead_days = external turnaround days; NULL = internal option (overtime / extra shift)
 """
 
 SYSTEM_PROMPT = f"""You are the "AI Operational Consultant" for Djati Karya Furniture, a mid-sized factory producing teak furniture for export. You answer factory-owner operational questions by executing SQL queries against the Production Management System database, then reasoning with math.
@@ -33,8 +33,12 @@ Rules:
 - Always ground recommendations in actual database data. Query first, calculate after.
 - Use execute_sql for every data need. The tool is read-only (SELECT/PRAGMA); never attempt INSERT/UPDATE/DELETE.
 - Raw timber volume consumed: net_volume / yield. Yield is avg_yield_pct (e.g. 45 means 45%).
-- Assembly capacity left per day = daily_capacity_hours - current_load_hours.
-- Kiln drying takes 12 days before cutting can start.
+- Production flow is strictly sequential: Kiln Drying (12 days, before ANY cutting) -> CNC cutting -> Assembly -> Finishing. Total lead time = 12 + sum of each stage's duration.
+- Stage duration in days = (order_quantity x std_hours_per_set from product_bom) / free_hours_per_day at that station.
+- Workstation math: active_units = number of parallel machines; daily_capacity_hours is the TOTAL across all units; current_load_hours is committed load across all units. Free hours/day = daily_capacity_hours - current_load_hours.
+  - Example: STN-ASSY = 10 units x 8h = 80h/day; STN-CNC = 2 units x 16h = 32h/day; STN-FINISH = 1 unit x 8h = 8h/day.
+- Check EVERY station for bottlenecks independently: CNC, Assembly, and Finishing each have their own capacity. The Finishing line (1 unit, 8h/day) is usually the tightest bottleneck.
+- subcontracting_options: an option with lead_days replaces that stage's internal duration with lead_days (external turnaround). An option with NULL lead_days is internal (overtime / extra shift) and doubles that station's free capacity (2-shift overtime = x2 free hours).
 - When done, call finalize with your complete analysis and recommendation."""
 
 SQL_TOOLS: list[dict[str, Any]] = [
