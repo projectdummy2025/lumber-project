@@ -1,5 +1,3 @@
-import { LayoutDashboard, MessageSquareText } from "lucide-react";
-
 interface HeaderProps {
   activeTab: "chat" | "dashboard";
   onTabChange: (tab: "chat" | "dashboard") => void;
@@ -15,25 +13,23 @@ export const Header = ({ activeTab, onTabChange }: HeaderProps) => {
       <nav className="flex items-center gap-2">
         <button
           onClick={() => onTabChange("chat")}
-          className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+          className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
             activeTab === "chat"
               ? "bg-blue-600/20 text-blue-400 border border-blue-500/30"
               : "text-gray-400 hover:bg-white/5 hover:text-white"
           }`}
         >
-          <MessageSquareText className="h-4 w-4" />
           AI Assistant
         </button>
 
         <button
           onClick={() => onTabChange("dashboard")}
-          className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+          className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
             activeTab === "dashboard"
               ? "bg-blue-600/20 text-blue-400 border border-blue-500/30"
               : "text-gray-400 hover:bg-white/5 hover:text-white"
           }`}
         >
-          <LayoutDashboard className="h-4 w-4" />
           Operations Dashboard
         </button>
       </nav>

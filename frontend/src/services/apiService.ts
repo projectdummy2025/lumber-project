@@ -30,6 +30,17 @@ export interface Workstation {
   current_load_hours: number;
 }
 
+export interface WorkOrder {
+  id: number;
+  wo_number: string;
+  client_name: string;
+  quantity: number;
+  due_date: string;
+  status: "QUEUED" | "IN_PROCESS" | "COMPLETED";
+  sku: string;
+  product_name: string;
+}
+
 export async function sendChatMessage(message: string): Promise<ChatResponse> {
   const response = await fetch("/api/chat", {
     method: "POST",
@@ -59,6 +70,16 @@ export async function getWorkstations(): Promise<Workstation[]> {
 
   if (!response.ok) {
     throw new Error(`Failed to fetch workstations: ${response.statusText}`);
+  }
+
+  return response.json();
+}
+
+export async function getWorkOrders(): Promise<WorkOrder[]> {
+  const response = await fetch("/api/dashboard/workorders");
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch work orders: ${response.statusText}`);
   }
 
   return response.json();

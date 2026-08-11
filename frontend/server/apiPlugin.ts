@@ -53,6 +53,19 @@ export function viteDatabaseApiPlugin(): Plugin {
             return;
           }
 
+          if (requestUrl === "/api/dashboard/workorders") {
+            const query = database.prepare(`
+              SELECT w.id, w.wo_number, w.client_name, w.quantity, w.due_date, w.status, p.sku, p.name as product_name
+              FROM work_orders w
+              JOIN products p ON w.product_id = p.id
+            `);
+            const workOrdersData = query.all();
+            response.setHeader("Content-Type", "application/json");
+            response.end(JSON.stringify(workOrdersData));
+            database.close();
+            return;
+          }
+
           if (requestUrl === "/api/dashboard/products") {
             const query = database.prepare(`
               SELECT p.id, p.sku, p.name, p.category, p.net_volume_m3,

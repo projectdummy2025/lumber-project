@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Marked } from "marked";
 import {
   MessageScroller,
   MessageScrollerButton,
@@ -15,7 +16,6 @@ import {
 } from "../ui/message";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
-import { ArrowUpIcon, Loader2Icon } from "lucide-react";
 import { sendChatMessage, type AgentLog } from "../../services/apiService";
 
 const dateNow = () => {
@@ -24,7 +24,7 @@ const dateNow = () => {
   const month = date.getMonth() + 1;
   const day = date.getDate();
 
-  return `${day}-${month}-${year}`;
+  return `${day}/${month}/${year}`;
 };
 
 interface MessageItem {
@@ -39,6 +39,63 @@ interface ChatViewProps {
   initialPrompt?: string;
   onClearInitialPrompt?: () => void;
 }
+
+// Helper function to format observation JSON or string neatly
+const formatLogObservation = (obs: string) => {
+  try {
+    const parsed = JSON.parse(obs);
+    return JSON.stringify(parsed, null, 2);
+  } catch {
+    return obs;
+  }
+};
+
+// Collapsible Agent Logs Component
+const CollapsibleAgentLogs = ({ logs }: { logs: AgentLog[] }) => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <div className="mt-4 rounded-lg bg-black/40 border border-white/10 overflow-hidden font-mono text-xs">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center justify-between p-3 bg-white/5 hover:bg-white/10 transition-colors text-left cursor-pointer"
+      >
+        <div className="flex items-center gap-2 text-emerald-400 font-semibold">
+          <span className="text-[10px] bg-emerald-500/20 px-1.5 py-0.5 rounded text-emerald-300">LOG</span>
+          <span>Agent Thought Process ({logs.length} Steps)</span>
+        </div>
+        <div className="flex items-center gap-1 text-xs text-gray-400">
+          <span>{isOpen ? "Sembunyikan" : "Tampilkan Details"}</span>
+          <span>{isOpen ? "▲" : "▼"}</span>
+        </div>
+      </button>
+
+      {isOpen && (
+        <div className="max-h-72 overflow-y-auto p-3 text-gray-300 leading-relaxed border-t border-white/5 bg-black/60">
+          {logs.map((log, index) => (
+            <div key={index} className="mb-3 last:mb-0 border-b border-white/5 pb-2 last:border-0">
+              <div className="flex items-center gap-2">
+                <span className="text-amber-400 font-bold uppercase text-[11px]">
+                  Step {index + 1}: {log.action}
+                </span>
+              </div>
+              {log.query && (
+                <div className="text-blue-300 mt-1 font-mono bg-blue-950/40 p-2 rounded border border-blue-500/20 whitespace-pre-wrap break-all text-[11px]">
+                  {log.query}
+                </div>
+              )}
+              {log.observation && (
+                <pre className="text-emerald-400/90 mt-1 font-mono bg-black/40 p-2 rounded border border-emerald-500/20 whitespace-pre text-[10px] overflow-x-auto">
+                  {formatLogObservation(log.observation)}
+                </pre>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
 
 export const ChatView = ({
   initialPrompt,
@@ -92,6 +149,8 @@ export const ChatView = ({
     }
   };
 
+  const markedInstance = new Marked();
+
   useEffect(() => {
     if (initialPrompt) {
       handleSendMessage(initialPrompt);
@@ -112,7 +171,7 @@ export const ChatView = ({
             <div className="mt-12 grid w-full grid-cols-2 gap-4">
               <button
                 onClick={() => handleSendMessage("Analisis Pesanan 100 Meja Teak (SET-DINING-01) selesai dalam 40 hari.")}
-                className="flex flex-col gap-1 rounded-xl border border-white/10 bg-white/5 p-4 text-left transition-colors hover:bg-white/10"
+                className="flex flex-col gap-1 rounded-xl border border-white/10 bg-white/5 p-4 text-left transition-colors hover:bg-white/10 cursor-pointer"
               >
                 <span className="font-semibold text-gray-200">Analisis Order Baru</span>
                 <span className="text-xs text-gray-400">100 Meja Teak (SET-DINING-01) selesai dalam 40 hari.</span>
@@ -120,7 +179,7 @@ export const ChatView = ({
 
               <button
                 onClick={() => handleSendMessage("Cek ketersediaan stok raw material teak dan yield rate.")}
-                className="flex flex-col gap-1 rounded-xl border border-white/10 bg-white/5 p-4 text-left transition-colors hover:bg-white/10"
+                className="flex flex-col gap-1 rounded-xl border border-white/10 bg-white/5 p-4 text-left transition-colors hover:bg-white/10 cursor-pointer"
               >
                 <span className="font-semibold text-gray-200">Cek Stok Timber</span>
                 <span className="text-xs text-gray-400">Ketersediaan raw material teak & yield rate rata-rata.</span>
@@ -128,7 +187,7 @@ export const ChatView = ({
 
               <button
                 onClick={() => handleSendMessage("Apakah ada workstation yang mengalami bottleneck / overload kapasitas saat ini?")}
-                className="flex flex-col gap-1 rounded-xl border border-white/10 bg-white/5 p-4 text-left transition-colors hover:bg-white/10"
+                className="flex flex-col gap-1 rounded-xl border border-white/10 bg-white/5 p-4 text-left transition-colors hover:bg-white/10 cursor-pointer"
               >
                 <span className="font-semibold text-gray-200">Deteksi Bottleneck</span>
                 <span className="text-xs text-gray-400">Identifikasi kapasitas workstation yang overload.</span>
@@ -136,7 +195,7 @@ export const ChatView = ({
 
               <button
                 onClick={() => handleSendMessage("Bandingkan biaya opsi subkontrak vs lembur (overtime) untuk mengatasi backlog.")}
-                className="flex flex-col gap-1 rounded-xl border border-white/10 bg-white/5 p-4 text-left transition-colors hover:bg-white/10"
+                className="flex flex-col gap-1 rounded-xl border border-white/10 bg-white/5 p-4 text-left transition-colors hover:bg-white/10 cursor-pointer"
               >
                 <span className="font-semibold text-gray-200">Hitung Solusi Operasional</span>
                 <span className="text-xs text-gray-400">Komparasi cost opsi subkontrak vs overtime.</span>
@@ -176,40 +235,22 @@ export const ChatView = ({
                                   : "bg-[grey]/20 text-gray-100"
                               }`}
                             >
-                              <p
-                                className={`overflow-hidden ${
-                                  msg.role === "user"
-                                    ? "text-ellipsis line-clamp-4"
-                                    : "line-clamp-none leading-loose text-balance whitespace-pre-wrap"
-                                }`}
-                              >
-                                {msg.text}
-                              </p>
+                              {msg.role === "user" ? (
+                                <p className="overflow-hidden text-ellipsis line-clamp-4">
+                                  {msg.text}
+                                </p>
+                              ) : (
+                                <div
+                                  className="markdown-content"
+                                  dangerouslySetInnerHTML={{
+                                    __html: markedInstance.parse(msg.text, { async: false })
+                                  }}
+                                />
+                              )}
 
-                              {/* Agent Thought Process Logs */}
+                              {/* Collapsible Agent Thought Process Logs */}
                               {msg.logs && msg.logs.length > 0 && (
-                                <div className="mt-4 rounded-lg bg-black/40 p-3 font-mono text-xs text-gray-300 border border-white/5">
-                                  <div className="mb-1 font-semibold text-emerald-400">
-                                    Agent Thought Process:
-                                  </div>
-                                  {msg.logs.map((log, index) => (
-                                    <div key={index} className="mb-2 last:mb-0">
-                                      <span className="text-amber-400">
-                                        [{log.action}]
-                                      </span>{" "}
-                                      {log.query && (
-                                        <div className="text-gray-400">
-                                          {log.query}
-                                        </div>
-                                      )}
-                                      {log.observation && (
-                                        <div className="text-emerald-300/80">
-                                          {log.observation}
-                                        </div>
-                                      )}
-                                    </div>
-                                  ))}
-                                </div>
+                                <CollapsibleAgentLogs logs={msg.logs} />
                               )}
                             </div>
                           </div>
@@ -222,7 +263,7 @@ export const ChatView = ({
                   ))}
                   {isLoading && (
                     <div className="flex items-center gap-2 p-4 text-xs text-gray-400">
-                      <Loader2Icon className="h-4 w-4 animate-spin text-blue-500" />
+                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
                       Assistant sedang berpikir...
                     </div>
                   )}
@@ -247,12 +288,12 @@ export const ChatView = ({
             type="button"
             onClick={() => handleSendMessage()}
             disabled={isLoading}
-            className="cursor-pointer rounded-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
+            className="cursor-pointer rounded-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center p-2"
           >
             {isLoading ? (
-              <Loader2Icon className="h-5 w-5 animate-spin" />
+              <span className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
             ) : (
-              <ArrowUpIcon />
+              <span>▲</span>
             )}
           </Button>
         </div>

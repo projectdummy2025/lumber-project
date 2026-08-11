@@ -15,18 +15,21 @@ const App = () => {
   };
 
   return (
-    <main className="font-montserrat flex h-screen w-full flex-col overflow-hidden bg-[#1e1e1e]">
+    <main className="font-montserrat flex h-screen w-full flex-col overflow-hidden bg-[#121212]">
       <Header activeTab={activeTab} onTabChange={setActiveTab} />
 
       <div className="flex-1 overflow-hidden relative">
-        {activeTab === "dashboard" ? (
+        {/* Keep both rendered in DOM to preserve chat state when toggling tabs */}
+        <div className={`h-full w-full ${activeTab === "dashboard" ? "block" : "hidden"}`}>
           <OperationsDashboard onSelectPrompt={handleSelectPrompt} />
-        ) : (
+        </div>
+
+        <div className={`h-full w-full ${activeTab === "chat" ? "block" : "hidden"}`}>
           <ChatView
             initialPrompt={selectedPrompt}
             onClearInitialPrompt={() => setSelectedPrompt("")}
           />
-        )}
+        </div>
       </div>
     </main>
   );
