@@ -131,7 +131,7 @@ To answer whether the 100 dining set order can be accepted, the production manag
    - `Net Free Hours/Day = Daily Capacity Hours - Current Load Hours`.
 
 2. **Manufacturing Lead Time (Real-World Pipelining Method)**:
-   In modern wood manufacturing, stations operate concurrently in **pipelining mode** (overlapping batches), so total shop-floor execution time is driven by the **primary bottleneck stasiun (stasiun dengan durasi terlama)** rather than summing all stasiuns sequentially.
+   In modern wood manufacturing, stations operate concurrently in **pipelining mode** (overlapping batches), so total shop-floor execution time is driven by the **primary bottleneck station (station with the longest duration)** rather than summing all stations sequentially.
 
    `Total Production Lead Time (Days) = Kiln Drying Cycle + Max(Station Durations)`
 

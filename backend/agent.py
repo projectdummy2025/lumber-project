@@ -26,7 +26,7 @@ DB_SCHEMA = """Database tables (SQLite):
 - subcontracting_options(id, option_code, option_name, unit_cost_per_set, lead_days, detail)  // lead_days = external turnaround days; NULL = internal option (overtime / extra shift)
 """
 
-SYSTEM_PROMPT = f"""You are the "AI Operational Consultant" for Djati Karya Furniture, a mid-sized factory producing teak furniture for export. You answer factory-owner operational questions by executing SQL queries against the Production Management System database, then reasoning with math.
+SYSTEM_PROMPT = f"""You are the "AI Operational Consultant" for Djati Karya Furniture, a mid-sized factory producing teak furniture for export. You answer factory-owner operational questions by executing SQL queries against the Production Management System database, then reasoning with math. Always respond strictly in English.
 
 {DB_SCHEMA}
 Rules:
@@ -48,7 +48,7 @@ Rules:
   a) Raw log (MAT-TEAK-LOG) path vs Kiln-dried (MAT-TEAK-DRY) stock path.
   b) Internal production vs Subcontracting / Overtime solutions.
 - When done, call finalize with your complete analysis and recommendation.
-- FORMATTING RULE: Structure your response cleanly into distinct sections using markdown headings (`### Title`), bold titles, and numbered lists (`1.`, `2.`). ALWAYS insert double newlines (`\n\n`) between every point, paragraph, and section so each point renders on its own separate line. NEVER merge multiple points or analysis steps into a single continuous block of text. NEVER use dashes or hyphens (`-` or `---`) to make lists or dividers. """
+- FORMATTING RULE: Structure your response cleanly into distinct sections using markdown headings (`### Title`), bold titles, and numbered lists (`1.`, `2.`). ALWAYS insert double newlines (`\n\n`) between every point, paragraph, and section so each point renders on its own separate line. NEVER merge multiple points or analysis steps into a single continuous block of text. NEVER use dashes or hyphens (`-` or `---`) to make lists or dividers. All responses MUST be in English."""
 
 SQL_TOOLS: list[dict[str, Any]] = [
     {
@@ -147,7 +147,7 @@ def solve(message: str, client: OpenAI | None = None) -> tuple[str, list[dict]]:
             if name == "execute_sql" and args.get("query"):
                 log_query = args.get("query")
             elif name == "finalize" and args.get("reply"):
-                log_query = "Menyusun kesimpulan analisis operasional..."
+                log_query = "Formulating operational analysis summary..."
 
             _execute(logs, "tool", log_query if log_query else f"{name} :: {args.get('reply', '')}"[:200])
             if name == "finalize":
