@@ -76,7 +76,7 @@ export const ChatPane = ({ initialPrompt }: ChatPaneProps) => {
       const errorMessage: MessageItem = {
         id: Date.now() + 1,
         role: "ai",
-        text: `Error: ${error instanceof Error ? error.message : "Gagal terhubung ke AI Agent"}`,
+        text: `Error: ${error instanceof Error ? error.message : "Failed to connect to AI Agent"}`,
         time: formatCurrentDate(),
       };
       setMessages((prev) => [...prev, errorMessage]);
@@ -100,8 +100,7 @@ export const ChatPane = ({ initialPrompt }: ChatPaneProps) => {
               <MessageScrollerContent>
                 {messages.length === 0 && (
                   <div className="flex h-full items-center justify-center p-8 text-center text-sm text-gray-500">
-                    Silakan sampaikan masalah operasional Anda atau pilih
-                    skenario di panel kiri.
+                    Ask an operational query or choose one of the scenario templates.
                   </div>
                 )}
                 {messages.map((message) => (
@@ -160,7 +159,7 @@ export const ChatPane = ({ initialPrompt }: ChatPaneProps) => {
                 {isLoading && (
                   <div className="flex items-center gap-2 p-4 text-xs text-gray-400">
                     <Loader2Icon className="h-4 w-4 animate-spin text-blue-500" />
-                    AI Consultant sedang Menganalisis Database Operasional...
+                    AI Consultant is analyzing operational database...
                   </div>
                 )}
               </MessageScrollerContent>
@@ -175,7 +174,7 @@ export const ChatPane = ({ initialPrompt }: ChatPaneProps) => {
         <Input
           onChange={(e) => setTextMessage(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
-          placeholder="Tanyakan masalah operasional pabrik..."
+          placeholder="Ask about factory operations..."
           value={textMessage}
           disabled={isLoading}
           className="w-[90%] border-none bg-transparent text-sm text-white focus:outline-none"

@@ -65,7 +65,7 @@ const CollapsibleAgentLogs = ({ logs }: { logs: AgentLog[] }) => {
           <span>Agent Thought Process ({logs.length} Steps)</span>
         </div>
         <div className="flex items-center gap-1 text-xs text-gray-400">
-          <span>{isOpen ? "Sembunyikan" : "Tampilkan Details"}</span>
+          <span>{isOpen ? "Hide" : "Show Details"}</span>
           <span>{isOpen ? "▲" : "▼"}</span>
         </div>
       </button>
@@ -134,7 +134,7 @@ export const ChatView = ({
       const errorMessage: MessageItem = {
         id: Date.now() + 1,
         role: "ai",
-        text: `Error: ${error instanceof Error ? error.message : "Gagal terhubung ke AI Agent"}`,
+        text: `Error: ${error instanceof Error ? error.message : "Failed to connect to AI Agent"}`,
         time: dateNow(),
       };
       setMessages((prev) => [...prev, errorMessage]);
@@ -164,41 +164,41 @@ export const ChatView = ({
         {messages.length < 1 && (
           <div className="w-10/12 my-auto flex flex-col items-center">
             <h1 className="text-center text-6xl leading-tight text-white/80">
-              Halo Alvin, Ada Yang Bisa Saya Bantu?
+              Hello Alvin, How Can I Help You Today?
             </h1>
 
             {/* Prompt Templates */}
             <div className="mt-12 grid w-full grid-cols-2 gap-4">
               <button
-                onClick={() => handleSendMessage("Analisis Pesanan 100 Meja Teak (SET-DINING-01) selesai dalam 40 hari.")}
+                onClick={() => handleSendMessage("Analyze feasibility for Order of 100 Teak Dining Sets (SET-DINING-01) with a 40-day deadline.")}
                 className="flex flex-col gap-1 rounded-xl border border-white/10 bg-white/5 p-4 text-left transition-colors hover:bg-white/10 cursor-pointer"
               >
-                <span className="font-semibold text-gray-200">Analisis Order Baru</span>
-                <span className="text-xs text-gray-400">100 Meja Teak (SET-DINING-01) selesai dalam 40 hari.</span>
+                <span className="font-semibold text-gray-200">Analyze New Order</span>
+                <span className="text-xs text-gray-400">100 Teak Dining Sets (SET-DINING-01) completion in 40 days.</span>
               </button>
 
               <button
-                onClick={() => handleSendMessage("Cek ketersediaan stok raw material teak dan yield rate.")}
+                onClick={() => handleSendMessage("Check raw teak timber stock availability and average yield rates.")}
                 className="flex flex-col gap-1 rounded-xl border border-white/10 bg-white/5 p-4 text-left transition-colors hover:bg-white/10 cursor-pointer"
               >
-                <span className="font-semibold text-gray-200">Cek Stok Timber</span>
-                <span className="text-xs text-gray-400">Ketersediaan raw material teak & yield rate rata-rata.</span>
+                <span className="font-semibold text-gray-200">Check Timber Inventory</span>
+                <span className="text-xs text-gray-400">Teak log availability & average yield rate.</span>
               </button>
 
               <button
-                onClick={() => handleSendMessage("Apakah ada workstation yang mengalami bottleneck / overload kapasitas saat ini?")}
+                onClick={() => handleSendMessage("Are any workstations currently experiencing bottleneck or capacity overload?")}
                 className="flex flex-col gap-1 rounded-xl border border-white/10 bg-white/5 p-4 text-left transition-colors hover:bg-white/10 cursor-pointer"
               >
-                <span className="font-semibold text-gray-200">Deteksi Bottleneck</span>
-                <span className="text-xs text-gray-400">Identifikasi kapasitas workstation yang overload.</span>
+                <span className="font-semibold text-gray-200">Detect Bottlenecks</span>
+                <span className="text-xs text-gray-400">Identify overloaded workstation capacity.</span>
               </button>
 
               <button
-                onClick={() => handleSendMessage("Bandingkan biaya opsi subkontrak vs lembur (overtime) untuk mengatasi backlog.")}
+                onClick={() => handleSendMessage("Compare subcontracting cost options vs overtime shift to clear the backlog.")}
                 className="flex flex-col gap-1 rounded-xl border border-white/10 bg-white/5 p-4 text-left transition-colors hover:bg-white/10 cursor-pointer"
               >
-                <span className="font-semibold text-gray-200">Hitung Solusi Operasional</span>
-                <span className="text-xs text-gray-400">Komparasi cost opsi subkontrak vs overtime.</span>
+                <span className="font-semibold text-gray-200">Operational Trade-off</span>
+                <span className="text-xs text-gray-400">Cost comparison of subcontracting vs overtime.</span>
               </button>
             </div>
           </div>
@@ -264,7 +264,7 @@ export const ChatView = ({
                   {isLoading && (
                     <div className="flex items-center gap-2 p-4 text-xs text-gray-400">
                       <span className="h-4 w-4 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
-                      Assistant sedang berpikir...
+                      Assistant is thinking...
                     </div>
                   )}
                 </MessageScrollerContent>
@@ -279,7 +279,7 @@ export const ChatView = ({
           <Input
             onChange={(e) => setTextMessage(e.target.value)}
             onKeyDown={(e) => handleSubmitPrompt(e)}
-            placeholder="Sampaikan masalah kamu"
+            placeholder="Type your message or prompt operational queries..."
             value={textMessage}
             disabled={isLoading}
             className="ml-4 w-10/12 border-none text-ellipsis bg-transparent text-white focus:outline-none"

@@ -47,10 +47,10 @@ export const OperationsDashboard = ({
           </div>
           <div>
             <Button
-              onClick={() => onSelectPrompt("Analisis Pesanan 100 Meja Teak (SET-DINING-01) selesai dalam 40 hari.")}
+              onClick={() => onSelectPrompt("Analyze feasibility for Order of 100 Teak Dining Sets (SET-DINING-01) with a 40-day deadline.")}
               className="bg-blue-600 hover:bg-blue-700 text-white cursor-pointer text-xs"
             >
-              Simulasi Order Baru (100 Meja)
+              Simulate New Order (100 Sets)
             </Button>
           </div>
         </header>
@@ -147,7 +147,7 @@ export const OperationsDashboard = ({
               <h3 className="text-lg font-semibold text-gray-200">
                 Timber Materials Stock
               </h3>
-              <span className="text-xs text-gray-400">Gudang Bahan Baku</span>
+              <span className="text-xs text-gray-400">Raw Timber Warehouse</span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
@@ -174,7 +174,7 @@ export const OperationsDashboard = ({
                     </div>
 
                     <div className="mt-3 flex justify-between text-xs text-gray-400 border-t border-white/5 pt-2">
-                      <span>Kadar Air: <strong className="text-white">{material.moisture_pct}%</strong></span>
+                      <span>Moisture Rate: <strong className="text-white">{material.moisture_pct}%</strong></span>
                       <span>Yield Rate: <strong className="text-emerald-300">{material.avg_yield_pct}%</strong></span>
                     </div>
                   </div>
@@ -234,44 +234,44 @@ export const OperationsDashboard = ({
                 AI Operational Scenarios
               </h3>
               <p className="text-xs text-gray-400 leading-relaxed mt-1">
-                Pilih skenario operasional di bawah untuk otomatis menganalisis status pabrik saat ini.
+                Select an operational scenario below to automatically analyze current factory status.
               </p>
             </div>
 
             <div className="flex flex-col gap-3">
               <button
                 onClick={() =>
-                  onSelectPrompt("Analisis Pesanan 100 Meja Teak (SET-DINING-01) selesai dalam 40 hari.")
+                  onSelectPrompt("Analyze feasibility for Order of 100 Teak Dining Sets (SET-DINING-01) with a 40-day deadline.")
                 }
                 className="w-full text-left border border-white/10 bg-white/5 hover:bg-white/10 transition-all cursor-pointer p-4 rounded-xl text-xs"
               >
                 <div>
-                  <div className="font-semibold text-gray-200">Simulasi Feasibility Order 100 Meja</div>
-                  <div className="text-[11px] text-gray-400 mt-1">Cek stok bahan, yield rate & bottleneck stasiun</div>
+                  <div className="font-semibold text-gray-200">Feasibility Simulation for 100 Sets</div>
+                  <div className="text-[11px] text-gray-400 mt-1">Check material stock, yield rate & station bottlenecks</div>
                 </div>
               </button>
 
               <button
                 onClick={() =>
-                  onSelectPrompt("Apakah ada workstation yang mengalami bottleneck / overload kapasitas saat ini?")
+                  onSelectPrompt("Are any workstations currently experiencing bottleneck or capacity overload?")
                 }
                 className="w-full text-left border border-white/10 bg-white/5 hover:bg-white/10 transition-all cursor-pointer p-4 rounded-xl text-xs"
               >
                 <div>
-                  <div className="font-semibold text-gray-200">Deteksi Stasiun Bottleneck</div>
-                  <div className="text-[11px] text-gray-400 mt-1">Identifikasi stasiun dengan waktu tunggu tertinggi</div>
+                  <div className="font-semibold text-gray-200">Detect Workstation Bottlenecks</div>
+                  <div className="text-[11px] text-gray-400 mt-1">Identify workstation with highest queue time</div>
                 </div>
               </button>
 
               <button
                 onClick={() =>
-                  onSelectPrompt("Bandingkan biaya opsi subkontrak vs lembur (overtime) untuk mengatasi backlog.")
+                  onSelectPrompt("Compare subcontracting cost options vs overtime shift to clear the backlog.")
                 }
                 className="w-full text-left border border-white/10 bg-white/5 hover:bg-white/10 transition-all cursor-pointer p-4 rounded-xl text-xs"
               >
                 <div>
-                  <div className="font-semibold text-gray-200">Komparasi Subkontrak vs Overtime</div>
-                  <div className="text-[11px] text-gray-400 mt-1">Hitung efisiensi biaya & waktu eksternal vs internal</div>
+                  <div className="font-semibold text-gray-200">Subcontracting vs Overtime Trade-off</div>
+                  <div className="text-[11px] text-gray-400 mt-1">Calculate cost & time efficiency of external vs internal options</div>
                 </div>
               </button>
             </div>
