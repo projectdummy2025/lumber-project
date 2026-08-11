@@ -15,7 +15,7 @@ from openai import OpenAI
 load_dotenv(Path(__file__).resolve().parent / ".env")
 
 DB_PATH = Path(__file__).resolve().parent / "pms_dummy.db"
-MAX_STEPS = 6
+MAX_STEPS = 12
 
 DB_SCHEMA = """Database tables (SQLite):
 - products(id, sku, name, category, net_volume_m3)  // net_volume_m3 = clean wood volume per set
@@ -32,14 +32,23 @@ SYSTEM_PROMPT = f"""You are the "AI Operational Consultant" for Djati Karya Furn
 Rules:
 - Always ground recommendations in actual database data. Query first, calculate after.
 - Use execute_sql for every data need. The tool is read-only (SELECT/PRAGMA); never attempt INSERT/UPDATE/DELETE.
-- Raw timber volume consumed: net_volume / yield. Yield is avg_yield_pct (e.g. 45 means 45%).
-- Production flow is strictly sequential: Kiln Drying (12 days, before ANY cutting) -> CNC cutting -> Assembly -> Finishing. Total lead time = 12 + sum of each stage's duration.
-- Stage duration in days = (order_quantity x std_hours_per_set from product_bom) / free_hours_per_day at that station.
-- Workstation math: active_units = number of parallel machines; daily_capacity_hours is the TOTAL across all units; current_load_hours is committed load across all units. Free hours/day = daily_capacity_hours - current_load_hours.
-  - Example: STN-ASSY = 10 units x 8h = 80h/day; STN-CNC = 2 units x 16h = 32h/day; STN-FINISH = 1 unit x 8h = 8h/day.
-- Check EVERY station for bottlenecks independently: CNC, Assembly, and Finishing each have their own capacity. The Finishing line (1 unit, 8h/day) is usually the tightest bottleneck.
-- subcontracting_options: an option with lead_days replaces that stage's internal duration with lead_days (external turnaround). An option with NULL lead_days is internal (overtime / extra shift) and doubles that station's free capacity (2-shift overtime = x2 free hours).
-- When done, call finalize with your complete analysis and recommendation."""
+- Standard Operational Time Units & Formulas:
+  1. Workstation Capacity: Daily Capacity Hours = active_units * 8 hours/day.
+  2. Free Capacity: Net Free Hours/Day = daily_capacity_hours - current_load_hours.
+  3. Raw Timber Requirement: Clean Net Vol / avg_yield_pct (e.g. 0.28m3 / 0.45 = 0.622m3 raw log per set).
+  4. Station Duration (Days): (order_quantity * std_hours_per_set) / Net Free Hours/Day.
+  5. Total Manufacturing Lead Time (Real-world Pipelining Method):
+     Total Lead Time (Days) = [Kiln Drying Days] + Max(Duration of STN-CNC, STN-ASSY, STN-FINISH)
+     - Kiln Drying Days: 12 days if using raw logs (MAT-TEAK-LOG, moisture ~26%). 0 days if using kiln-dried sawn timber (MAT-TEAK-DRY, moisture ~12%).
+     - Pipelining note: Non-bottleneck stations run concurrently in overlap mode and do not add cumulative days to total lead time.
+- Subcontracting & Overtime Rules:
+  - subcontracting_options with lead_days replaces that stage's internal duration with lead_days (external turnaround).
+  - subcontracting_options with NULL lead_days is an internal option (overtime / 2-shift) which doubles that station's free capacity (x2 Net Free Hours/Day).
+- Analyze feasibility against deadlines (e.g., 40 days) by comparing:
+  a) Raw log (MAT-TEAK-LOG) path vs Kiln-dried (MAT-TEAK-DRY) stock path.
+  b) Internal production vs Subcontracting / Overtime solutions.
+- When done, call finalize with your complete analysis and recommendation.
+- FORMATTING RULE: Structure your response cleanly into distinct sections using markdown headings (`### Title`), bold titles, and numbered lists (`1.`, `2.`). ALWAYS insert double newlines (`\n\n`) between every point, paragraph, and section so each point renders on its own separate line. NEVER merge multiple points or analysis steps into a single continuous block of text. NEVER use dashes or hyphens (`-` or `---`) to make lists or dividers. """
 
 SQL_TOOLS: list[dict[str, Any]] = [
     {
@@ -132,7 +141,15 @@ def solve(message: str, client: OpenAI | None = None) -> tuple[str, list[dict]]:
             # some providers prefix tool names (e.g. "functions.execute_sql" or "functionsexecute_sql1")
             name = re.sub(r"^(function[s]?\.?|tool[s]?\.?)", "", call["function"]["name"]).rstrip("0123456789")
             args = json.loads(call["function"]["arguments"] or "{}")
-            _execute(logs, "tool", f"{name} :: {args.get('query') or args.get('reply', '')}"[:200])
+
+            # format the query parameters beautifully for frontend visualization
+            log_query = ""
+            if name == "execute_sql" and args.get("query"):
+                log_query = args.get("query")
+            elif name == "finalize" and args.get("reply"):
+                log_query = "Menyusun kesimpulan analisis operasional..."
+
+            _execute(logs, "tool", log_query if log_query else f"{name} :: {args.get('reply', '')}"[:200])
             if name == "finalize":
                 reply = args.get("reply") or "No reply provided."
                 _execute(logs, "finalize", reply)
@@ -141,7 +158,7 @@ def solve(message: str, client: OpenAI | None = None) -> tuple[str, list[dict]]:
                 observation = f"Unknown tool: {name}"
             else:
                 observation = _execute_sql(args.get("query", ""))
-            _execute(logs, "observation", observation[:400])
+            _execute(logs, "observation", observation)
             messages.append({"role": "tool", "tool_call_id": call["id"], "content": observation})
 
     _execute(logs, "finalize", "Max steps reached without a final answer.")

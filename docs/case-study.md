@@ -74,14 +74,14 @@ CREATE TABLE inventory_materials (
     avg_yield_pct DECIMAL(4,1) DEFAULT 45.0
 );
 
--- 4. Workstations & Capacity Hours
+-- 4. Workstations & Capacity Hours (Standard 8-Hour Workday per Unit)
 CREATE TABLE workstations (
     id INT PRIMARY KEY AUTO_INCREMENT,
     station_code VARCHAR(20) UNIQUE NOT NULL,
     station_name VARCHAR(100) NOT NULL,
-    active_units INT DEFAULT 1,
-    daily_capacity_hours DECIMAL(4,1) NOT NULL,
-    current_load_hours DECIMAL(6,1) DEFAULT 0.0
+    active_units INT DEFAULT 1,                -- Number of parallel machines/workers
+    daily_capacity_hours DECIMAL(4,1) NOT NULL, -- active_units * 8 hours
+    current_load_hours DECIMAL(6,1) DEFAULT 0.0 -- Already committed load from active WOs
 );
 
 -- 5. Work Order Status
@@ -112,30 +112,53 @@ INSERT INTO workstations (station_code, station_name, active_units, daily_capaci
 ('STN-KILN', 'Kiln Dryer', 2, 48.0, 40.8),
 ('STN-CNC', 'CNC Router Machine', 2, 32.0, 24.9),
 ('STN-ASSY', 'Joinery & Assembly', 10, 80.0, 70.4),
-('STN-FINISH', 'Finishing Line', 1, 8.0, 4.8);
+INSERT INTO workstations (station_code, station_name, active_units, daily_capacity_hours, current_load_hours) VALUES
+('STN-KILN', 'Kiln Dryer', 2, 48.0, 24.0),
+('STN-CNC', 'CNC Router Machine', 2, 32.0, 12.0),
+('STN-ASSY', 'Joinery & Assembly', 10, 80.0, 40.0),
+('STN-FINISH', 'Finishing Line', 4, 32.0, 16.0);
 ```
 
 ---
 
-## 3. Analysis Complexity & Manual Calculation Barriers
+## 3. Standard Operational Metrics & Analysis Complexity
 
-To answer whether the 100 dining set order can be accepted, the production manager must perform a complex cross-analysis:
+To answer whether the 100 dining set order can be accepted, the production manager and AI Consultant perform standard manufacturing calculations:
 
-1. **Raw Timber Requirement Calculation:**
+### Standard Scheduling & Pipelining Metrics
+1. **Daily Resource Capacity**:
+   - `Daily Capacity Hours = Active Units * 8 hours/day` (Standard 8-hour shift per machine/worker).
+   - `Net Free Hours/Day = Daily Capacity Hours - Current Load Hours`.
+
+2. **Manufacturing Lead Time (Real-World Pipelining Method)**:
+   In modern wood manufacturing, stations operate concurrently in **pipelining mode** (overlapping batches), so total shop-floor execution time is driven by the **primary bottleneck stasiun (stasiun dengan durasi terlama)** rather than summing all stasiuns sequentially.
+
+   `Total Production Lead Time (Days) = Kiln Drying Cycle + Max(Station Durations)`
+
+   - *Kiln Drying Cycle:* Fixed 12 days (Only if using raw logs `MAT-TEAK-LOG`. If using `MAT-TEAK-DRY` ready stock, Kiln Drying is 0 days).
+   - *Station Duration (Days) = (Order Qty * Std Hours) / Net Free Hours/Day*.
+
+### Operational Calculation Example (100 Sets SET-DINING-01):
+1. **Raw Timber Requirement:**
    - Clean component volume per set = $0.280\text{ m}^3$.
-   - Net requirement for 100 sets = $100 \times 0.280 = 28.0\text{ m}^3$.
-   - Factoring in the $45\%$ yield rate, actual raw timber required = $\frac{28.0\text{ m}^3}{0.45} = \mathbf{62.22\text{ m}^3}$.
-   - Current warehouse raw stock is $90.00\text{ m}^3$ (sufficient by volume, but requires 12 days of kiln drying).
+   - Factoring in the $45\%$ yield rate (`MAT-TEAK-LOG`), raw timber required = $\frac{28.0\text{ m}^3}{0.45} = \mathbf{62.22\text{ m}^3}$.
+   - Available raw logs stock is $90.00\text{ m}^3$ (Sufficient by volume, requires 12 days Kiln Drying).
 
-2. **Work Hour Load & Bottleneck Calculation (per station):**
-   - **CNC Cutting** — requirement = $100 \times 3.5 \text{ hours} = \mathbf{350 \text{ hours}}$. Free capacity at `STN-CNC` = $32.0 - 24.9 = \mathbf{7.1 \text{ hours/day}}$. Internal execution time = $\frac{350}{7.1} = \mathbf{49.3 \text{ days}}$.
-   - **Assembly** — requirement = $100 \times 12.0 \text{ hours} = \mathbf{1,200 \text{ hours}}$. Free capacity at `STN-ASSY` = $80.0 - 70.4 = \mathbf{9.6 \text{ hours/day}}$. Internal execution time = $\frac{1,200}{9.6} = \mathbf{125 \text{ days}}$.
-   - **Finishing** — requirement = $100 \times 6.0 \text{ hours} = \mathbf{600 \text{ hours}}$. Free capacity at `STN-FINISH` = $8.0 - 4.8 = \mathbf{3.2 \text{ hours/day}}$. Internal execution time = $\frac{600}{3.2} = \mathbf{187.5 \text{ days}}$.
-   - **Main Issue:** All three stages are severely bottlenecked internally. The tightest is Finishing (187.5 days), followed by Assembly (125 days) and CNC (49.3 days). After 12-day kiln drying, purely internal execution totals $\mathbf{373.8 \text{ days}}$ — far beyond the 40-day deadline.
+2. **Workstation Duration & Bottleneck Detection (Internal Production):**
+   - **CNC Router Machine** (`STN-CNC`): Free capacity = $32.0 - 12.0 = \mathbf{20.0 \text{ hours/day}}$.
+     - Duration = $\frac{100 \text{ sets} \times 3.5 \text{ h}}{20.0 \text{ h/day}} = \mathbf{17.5 \text{ days}}$.
+   - **Joinery & Assembly** (`STN-ASSY`): Free capacity = $80.0 - 40.0 = \mathbf{40.0 \text{ hours/day}}$.
+     - Duration = $\frac{100 \text{ sets} \times 12.0 \text{ h}}{40.0 \text{ h/day}} = \mathbf{30.0 \text{ days}}$ **(Primary Bottleneck)**.
+   - **Finishing Line** (`STN-FINISH`): Free capacity = $32.0 - 16.0 = \mathbf{16.0 \text{ hours/day}}$.
+     - Duration = $\frac{100 \text{ sets} \times 6.0 \text{ h}}{16.0 \text{ h/day}} = \mathbf{37.5 \text{ days}}$ **(Tightest Bottleneck)**.
 
-3. **Strategic Decision Trade-offs:**
-   - *Option 1 (Internal 2-Shift Overtime):* Add a night shift for assembly. However, overtime costs balloon and capacity remains tight.
-   - *Option 2 (Full Outsource Path):* Outsource CNC cutting (8 days), raw carpentry assembly (8 days), and finishing (6 days) to partner shops. Internal processing is reduced to kiln drying only. Total lead time drops from 373.8 days to $\mathbf{12 + 8 + 8 + 6 = 34 \text{ days}}$, meeting the deadline with a 6-day buffer.
+   - **Internal Lead Time Summary (Pipelining):**
+     - Using `MAT-TEAK-LOG`: $12 \text{ days (KD)} + \max(17.5, 30.0, 37.5) = 12 + 37.5 = \mathbf{49.5 \text{ days}}$ (Exceeds 40-day deadline).
+     - Using `MAT-TEAK-DRY` (ready stock): $0 \text{ days (KD)} + 37.5 \text{ days} = \mathbf{37.5 \text{ days}}$ **(Feasible / Meets 40-day deadline!)**.
+
+3. **Strategic Optimization (Subcontracting vs Overtime):**
+   - *Option A (Use MAT-TEAK-DRY stock):* Lead time = 37.5 days (Finished on time internally without extra cost!).
+   - *Option B (If using MAT-TEAK-LOG + Subcontract Assembly/Finishing):* Lead time drops to $12 \text{ (KD)} + 8 \text{ (Subcon lead days)} = \mathbf{20 \text{ days}}$.
 
 ---
 
