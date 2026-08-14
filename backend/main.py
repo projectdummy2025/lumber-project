@@ -91,15 +91,18 @@ def chat_with_agent(request: ChatRequest):
 
     # Convert agent logs to API contract format
     formatted = []
+    import json
     for entry in logs:
-        if entry["role"] == "finalize":
-            continue
-        formatted.append(AgentLog(
-            action=entry["role"],
-            query=entry["content"][:200] if entry["role"] == "tool" else None,
-            observation=entry["content"][:400] if entry["role"] == "observation" else None,
-        ))
-    formatted = [f for f in formatted if f.query or f.observation]
+        if entry["role"] == "thought":
+            try:
+                thought_data = json.loads(entry["content"])
+                formatted.append(AgentLog(
+                    action=thought_data.get("title", "Processing"),
+                    query=thought_data.get("description", ""),
+                    observation=None
+                ))
+            except json.JSONDecodeError:
+                pass
     return ChatResponse(status="success", reply=reply, agent_logs=formatted)
 
 @app.get("/api/dashboard/inventory", response_model=List[InventoryMaterial])

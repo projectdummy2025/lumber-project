@@ -16,6 +16,7 @@ import {
 } from "../ui/message";
 import { Button } from "../ui/button";
 import { sendChatMessage, type AgentLog } from "../../services/apiService";
+import { CheckCircle2, ChevronDown, ChevronRight, LightbulbIcon, BrainCircuitIcon } from "lucide-react";
 
 // Format as DD/MM/YYYY
 const dateNow = () => {
@@ -36,6 +37,57 @@ interface ChatViewProps {
   onClearInitialPrompt?: () => void;
 }
 
+const CollapsibleAgentLogs = ({ logs }: { logs: AgentLog[] }) => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  if (!logs || logs.length === 0) return null;
+
+  return (
+    <div className="mt-4 mb-2 w-full">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center gap-2 text-sm text-gray-400 hover:text-gray-300 transition-colors cursor-pointer bg-transparent border-none p-0"
+      >
+        <div className="flex h-6 w-6 items-center justify-center rounded-full bg-white/5 border border-white/10">
+          <BrainCircuitIcon className="h-3 w-3" />
+        </div>
+        <span className="font-medium">Thought process</span>
+        {isOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+      </button>
+
+      {isOpen && (
+        <div className="mt-4 pl-3">
+          <div className="relative border-l-2 border-white/10 pl-6 pb-2">
+            {logs.map((log, index) => (
+              <div key={index} className="mb-6 relative">
+                <div className="absolute -left-[32.5px] top-0 bg-[#222] rounded-full p-0.5">
+                  <CheckCircle2 className="h-4 w-4 text-gray-500 fill-gray-500/20" />
+                </div>
+                <h4 className="text-sm font-semibold text-gray-200 capitalize">
+                  {log.action.replace(/_/g, ' ')}
+                </h4>
+                {log.query && (
+                  <p className="mt-1.5 text-[0.85em] leading-relaxed text-gray-400">
+                    {log.query}
+                  </p>
+                )}
+              </div>
+            ))}
+            
+            <div className="relative">
+              <div className="absolute -left-[32.5px] top-0 bg-[#222] rounded-full p-0.5">
+                <LightbulbIcon className="h-4 w-4 text-gray-400" />
+              </div>
+              <h4 className="text-sm font-semibold text-gray-400">
+                Thinking completed
+              </h4>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 // Prompt template suggestions for the empty state
 const PROMPT_SUGGESTIONS = [
@@ -181,6 +233,10 @@ export const ChatView = ({ initialPrompt, onClearInitialPrompt }: ChatViewProps)
                                     __html: markedInstance.parse(msg.text, { async: false }) as string,
                                   }}
                                 />
+                              )}
+
+                              {msg.logs && msg.logs.length > 0 && (
+                                <CollapsibleAgentLogs logs={msg.logs} />
                               )}
                             </div>
                           </div>

@@ -16,7 +16,7 @@ import {
 } from "../ui/message";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
-import { ArrowUpIcon, Loader2Icon } from "lucide-react";
+import { ArrowUpIcon, Loader2Icon, CheckCircle2, ChevronDown, ChevronRight, LightbulbIcon, BrainCircuitIcon } from "lucide-react";
 import { sendChatMessage, type AgentLog } from "../../services/apiService";
 
 const formatCurrentDate = () => {
@@ -41,6 +41,58 @@ interface MessageItem {
 interface ChatPaneProps {
   initialPrompt?: string;
 }
+
+const CollapsibleAgentLogs = ({ logs }: { logs: AgentLog[] }) => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  if (!logs || logs.length === 0) return null;
+
+  return (
+    <div className="mt-4 mb-2 w-full">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center gap-2 text-sm text-gray-400 hover:text-gray-300 transition-colors cursor-pointer bg-transparent border-none p-0"
+      >
+        <div className="flex h-6 w-6 items-center justify-center rounded-full bg-white/5 border border-white/10">
+          <BrainCircuitIcon className="h-3 w-3" />
+        </div>
+        <span className="font-medium">Thought process</span>
+        {isOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+      </button>
+
+      {isOpen && (
+        <div className="mt-4 pl-3">
+          <div className="relative border-l-2 border-white/10 pl-6 pb-2">
+            {logs.map((log, index) => (
+              <div key={index} className="mb-6 relative">
+                <div className="absolute -left-[32.5px] top-0 bg-[#222] rounded-full p-0.5">
+                  <CheckCircle2 className="h-4 w-4 text-gray-500 fill-gray-500/20" />
+                </div>
+                <h4 className="text-sm font-semibold text-gray-200 capitalize">
+                  {log.action.replace(/_/g, ' ')}
+                </h4>
+                {log.query && (
+                  <p className="mt-1.5 text-[0.85em] leading-relaxed text-gray-400">
+                    {log.query}
+                  </p>
+                )}
+              </div>
+            ))}
+            
+            <div className="relative">
+              <div className="absolute -left-[32.5px] top-0 bg-[#222] rounded-full p-0.5">
+                <LightbulbIcon className="h-4 w-4 text-gray-400" />
+              </div>
+              <h4 className="text-sm font-semibold text-gray-400">
+                Thinking completed
+              </h4>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 export const ChatPane = ({ initialPrompt }: ChatPaneProps) => {
   const [textMessage, setTextMessage] = useState("");
@@ -129,6 +181,10 @@ export const ChatPane = ({ initialPrompt }: ChatPaneProps) => {
                               className="whitespace-pre-wrap [&>h1]:text-2xl [&>h1]:font-bold [&>h1]:mb-4 [&>h2]:text-xl [&>h2]:font-bold [&>h2]:mb-3 [&>h3]:text-lg [&>h3]:font-semibold [&>h3]:mb-2 [&>h4]:text-base [&>h4]:font-semibold [&>h4]:mb-2 [&>p]:mb-3 last:[&>p]:mb-0 [&>ul]:list-disc [&>ul]:pl-5 [&>ul]:mb-3 [&>ol]:list-decimal [&>ol]:pl-5 [&>ol]:mb-3 [&>li]:mb-1 [&_strong]:font-bold [&_em]:italic"
                               dangerouslySetInnerHTML={{ __html: marked.parse(message.text) as string }} 
                             />
+                          )}
+                          
+                          {message.logs && message.logs.length > 0 && (
+                            <CollapsibleAgentLogs logs={message.logs} />
                           )}
                         </div>
                         <MessageFooter className="text-[0.7em] font-semibold text-gray-500">

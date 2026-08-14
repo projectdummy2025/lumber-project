@@ -63,9 +63,11 @@ SQL_TOOLS: list[dict[str, Any]] = [
             "parameters": {
                 "type": "object",
                 "properties": {
+                    "thought_title": {"type": "string", "description": "A short, professional title of what you are analyzing in this step (e.g., 'Checking Material Stock', 'Calculating Capacity')."},
+                    "thought_description": {"type": "string", "description": "A detailed explanation of your reasoning and what you hope to achieve with this query."},
                     "query": {"type": "string", "description": "SQL SELECT statement"},
                 },
-                "required": ["query"],
+                "required": ["thought_title", "thought_description", "query"],
                 "additionalProperties": False,
             },
         },
@@ -78,9 +80,11 @@ SQL_TOOLS: list[dict[str, Any]] = [
             "parameters": {
                 "type": "object",
                 "properties": {
+                    "thought_title": {"type": "string", "description": "A short, professional title indicating you are finalizing the report."},
+                    "thought_description": {"type": "string", "description": "A detailed explanation summarizing your overall findings before generating the final reply."},
                     "reply": {"type": "string", "description": "The full final response to the user."},
                 },
-                "required": ["reply"],
+                "required": ["thought_title", "thought_description", "reply"],
                 "additionalProperties": False,
             },
         },
@@ -146,23 +150,21 @@ def solve(message: str, client: OpenAI | None = None) -> tuple[str, list[dict]]:
             name = re.sub(r"^(function[s]?\.?|tool[s]?\.?)", "", call["function"]["name"]).rstrip("0123456789")
             args = json.loads(call["function"]["arguments"] or "{}")
 
-            # format the query parameters beautifully for frontend visualization
-            log_query = ""
-            if name == "execute_sql" and args.get("query"):
-                log_query = args.get("query")
-            elif name == "finalize" and args.get("reply"):
-                log_query = "Formulating operational analysis summary..."
+            title = args.get("thought_title", "Processing")
+            desc = args.get("thought_description", "Analyzing data...")
+            _execute(logs, "thought", json.dumps({"title": title, "description": desc}))
 
-            _execute(logs, "tool", log_query if log_query else f"{name} :: {args.get('reply', '')}"[:200])
             if name == "finalize":
                 reply = args.get("reply") or "No reply provided."
                 _execute(logs, "finalize", reply)
                 return reply, logs
+            
             if name != "execute_sql":
                 observation = f"Unknown tool: {name}"
             else:
                 observation = _execute_sql(args.get("query", ""))
-            _execute(logs, "observation", observation)
+            
+            # The observation is only appended to messages for the LLM, not to logs for the UI
             messages.append({"role": "tool", "tool_call_id": call["id"], "content": observation})
 
     _execute(logs, "finalize", "Max steps reached without a final answer.")
