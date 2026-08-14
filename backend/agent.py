@@ -14,7 +14,11 @@ from openai import OpenAI
 
 load_dotenv(Path(__file__).resolve().parent / ".env")
 
-DB_PATH = Path(__file__).resolve().parent / "pms_dummy.db"
+dockerDataDirectory = Path("/app/data")
+if dockerDataDirectory.exists():
+    DB_PATH = dockerDataDirectory / "pms_dummy.db"
+else:
+    DB_PATH = Path(__file__).resolve().parent / "pms_dummy.db"
 MAX_STEPS = 12
 
 DB_SCHEMA = """Database tables (SQLite):

@@ -1,4 +1,6 @@
 import os
+import sqlite3
+from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -34,6 +36,37 @@ class ChatResponse(BaseModel):
     reply: str
     agent_logs: List[AgentLog] = []
 
+# Dashboard inventory item schema
+class InventoryMaterial(BaseModel):
+    id: int
+    material_code: str
+    material_name: str
+    material_type: Optional[str] = None
+    stock_quantity: float
+    unit: str
+    moisture_pct: Optional[float] = None
+    avg_yield_pct: Optional[float] = None
+
+# Dashboard workstation schema
+class Workstation(BaseModel):
+    id: int
+    station_code: str
+    station_name: str
+    active_units: int
+    daily_capacity_hours: float
+    current_load_hours: float
+
+# Dashboard work order schema
+class WorkOrder(BaseModel):
+    id: int
+    wo_number: str
+    client_name: str
+    quantity: int
+    due_date: str
+    status: str
+    sku: str
+    product_name: str
+
 @app.get("/")
 def read_root():
     return {"status": "ok", "message": "Backend API is running. See /docs for Swagger UI."}
@@ -68,6 +101,73 @@ def chat_with_agent(request: ChatRequest):
         ))
     formatted = [f for f in formatted if f.query or f.observation]
     return ChatResponse(status="success", reply=reply, agent_logs=formatted)
+
+@app.get("/api/dashboard/inventory", response_model=List[InventoryMaterial])
+def fetchInventory():
+    # Resolve the database path depending on container or local host environment
+    dockerDataDirectory = Path("/app/data")
+    if dockerDataDirectory.exists():
+        databasePath = dockerDataDirectory / "pms_dummy.db"
+    else:
+        databasePath = Path(__file__).resolve().parent / "pms_dummy.db"
+
+    # Connect to the SQLite database and query materials
+    databaseConnection = sqlite3.connect(databasePath)
+    databaseConnection.row_factory = sqlite3.Row
+    databaseCursor = databaseConnection.cursor()
+    databaseCursor.execute("SELECT * FROM inventory_materials")
+    inventoryRows = databaseCursor.fetchall()
+    
+    # Convert SQLite row objects to a list of dicts for Pydantic response parsing
+    inventoryItems = [dict(row) for row in inventoryRows]
+    databaseConnection.close()
+    return inventoryItems
+
+@app.get("/api/dashboard/workstations", response_model=List[Workstation])
+def fetchWorkstations():
+    # Resolve the database path depending on container or local host environment
+    dockerDataDirectory = Path("/app/data")
+    if dockerDataDirectory.exists():
+        databasePath = dockerDataDirectory / "pms_dummy.db"
+    else:
+        databasePath = Path(__file__).resolve().parent / "pms_dummy.db"
+
+    # Connect to the SQLite database and query workstations
+    databaseConnection = sqlite3.connect(databasePath)
+    databaseConnection.row_factory = sqlite3.Row
+    databaseCursor = databaseConnection.cursor()
+    databaseCursor.execute("SELECT * FROM workstations")
+    workstationRows = databaseCursor.fetchall()
+    
+    # Convert SQLite row objects to a list of dicts for Pydantic response parsing
+    workstationItems = [dict(row) for row in workstationRows]
+    databaseConnection.close()
+    return workstationItems
+
+@app.get("/api/dashboard/workorders", response_model=List[WorkOrder])
+def fetchWorkorders():
+    # Resolve the database path depending on container or local host environment
+    dockerDataDirectory = Path("/app/data")
+    if dockerDataDirectory.exists():
+        databasePath = dockerDataDirectory / "pms_dummy.db"
+    else:
+        databasePath = Path(__file__).resolve().parent / "pms_dummy.db"
+
+    # Connect to the SQLite database and query work orders with product details joined
+    databaseConnection = sqlite3.connect(databasePath)
+    databaseConnection.row_factory = sqlite3.Row
+    databaseCursor = databaseConnection.cursor()
+    databaseCursor.execute("""
+        SELECT w.id, w.wo_number, w.client_name, w.quantity, w.due_date, w.status, p.sku, p.name as product_name
+        FROM work_orders w
+        JOIN products p ON w.product_id = p.id
+    """)
+    workorderRows = databaseCursor.fetchall()
+    
+    # Convert SQLite row objects to a list of dicts for Pydantic response parsing
+    workorderItems = [dict(row) for row in workorderRows]
+    databaseConnection.close()
+    return workorderItems
 
 if __name__ == "__main__":
     import uvicorn
