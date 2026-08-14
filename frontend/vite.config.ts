@@ -19,6 +19,8 @@ export default defineConfig({
     },
   },
   server: {
+    allowedHosts: ["lumber.alcode.my.id"],
+    host: true,
     proxy: {
       "/api/chat": "http://127.0.0.1:8000",
     },

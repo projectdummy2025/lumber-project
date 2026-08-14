@@ -5,7 +5,12 @@ Run once: python init_db.py
 import sqlite3
 from pathlib import Path
 
-DB_PATH = Path(__file__).parent / "pms_dummy.db"
+DOCKER_DATA_DIR = Path("/app/data")
+
+if DOCKER_DATA_DIR.exists():
+	DB_PATH = DOCKER_DATA_DIR / "pms_dummy.db"
+else:
+	DB_PATH = Path(__file__).parent / "pms_dummy.db"
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS products (
