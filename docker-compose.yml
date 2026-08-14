@@ -3,10 +3,8 @@ services:
     build: ./backend
     container_name: lumber_backend
     privileged: true
-    ports:
-      - 8000:8000
     volumes:
-      - sqllite_data:/app/data
+      - sqllite_data:/app/data:Z
     restart: unless-stopped
 
   frontend:
