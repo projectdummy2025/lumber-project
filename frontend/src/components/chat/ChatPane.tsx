@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { marked } from "marked";
 import {
   MessageScroller,
   MessageScrollerButton,
@@ -121,32 +122,13 @@ export const ChatPane = ({ initialPrompt }: ChatPaneProps) => {
                               : "border border-white/10 bg-white/10 text-gray-100"
                           }`}
                         >
-                          <p className="whitespace-pre-wrap">{message.text}</p>
-
-                          {/* Render Agent Thought Process logs */}
-                          {message.logs && message.logs.length > 0 && (
-                            <div className="mt-4 rounded-lg border border-white/5 bg-black/40 p-3 font-mono text-[10px] text-gray-300">
-                              <div className="mb-1 font-semibold text-emerald-400">
-                                Agent Thought Process:
-                              </div>
-                              {message.logs.map((log, index) => (
-                                <div key={index} className="mb-2 last:mb-0">
-                                  <span className="text-amber-400">
-                                    [{log.action}]
-                                  </span>{" "}
-                                  {log.query && (
-                                    <div className="text-gray-400">
-                                      {log.query}
-                                    </div>
-                                  )}
-                                  {log.observation && (
-                                    <div className="mt-1 text-emerald-300/80">
-                                      {log.observation}
-                                    </div>
-                                  )}
-                                </div>
-                              ))}
-                            </div>
+                          {message.role === "user" ? (
+                            <p className="whitespace-pre-wrap">{message.text}</p>
+                          ) : (
+                            <div 
+                              className="whitespace-pre-wrap [&>h1]:text-2xl [&>h1]:font-bold [&>h1]:mb-4 [&>h2]:text-xl [&>h2]:font-bold [&>h2]:mb-3 [&>h3]:text-lg [&>h3]:font-semibold [&>h3]:mb-2 [&>h4]:text-base [&>h4]:font-semibold [&>h4]:mb-2 [&>p]:mb-3 last:[&>p]:mb-0 [&>ul]:list-disc [&>ul]:pl-5 [&>ul]:mb-3 [&>ol]:list-decimal [&>ol]:pl-5 [&>ol]:mb-3 [&>li]:mb-1 [&_strong]:font-bold [&_em]:italic"
+                              dangerouslySetInnerHTML={{ __html: marked.parse(message.text) as string }} 
+                            />
                           )}
                         </div>
                         <MessageFooter className="text-[0.7em] font-semibold text-gray-500">

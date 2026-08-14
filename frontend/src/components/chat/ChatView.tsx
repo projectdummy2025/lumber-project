@@ -23,15 +23,6 @@ const dateNow = () => {
   return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
 };
 
-// Try to pretty-print observation as JSON
-const formatLogObservation = (obs: string) => {
-  try {
-    return JSON.stringify(JSON.parse(obs), null, 2);
-  } catch {
-    return obs;
-  }
-};
-
 interface MessageItem {
   id: number;
   role: "user" | "ai";
@@ -45,52 +36,6 @@ interface ChatViewProps {
   onClearInitialPrompt?: () => void;
 }
 
-// Collapsible agent thought process logs panel
-const CollapsibleAgentLogs = ({ logs }: { logs: AgentLog[] }) => {
-  const [isOpen, setIsOpen] = useState(false);
-
-  return (
-    <div className="mt-4 rounded-lg bg-black/40 border border-white/10 overflow-hidden font-mono text-xs">
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between p-3 bg-white/5 hover:bg-white/10 transition-colors text-left cursor-pointer"
-      >
-        <div className="flex items-center gap-2 text-emerald-400 font-semibold">
-          <span className="text-[10px] bg-emerald-500/20 px-1.5 py-0.5 rounded text-emerald-300">LOG</span>
-          <span>Agent Thought Process ({logs.length} Steps)</span>
-        </div>
-        <div className="flex items-center gap-1 text-xs text-gray-400">
-          <span>{isOpen ? "Hide" : "Show Details"}</span>
-          <span>{isOpen ? "▲" : "▼"}</span>
-        </div>
-      </button>
-
-      {isOpen && (
-        <div className="max-h-72 overflow-y-auto p-3 text-gray-300 leading-relaxed border-t border-white/5 bg-black/60">
-          {logs.map((log, index) => (
-            <div key={index} className="mb-3 last:mb-0 border-b border-white/5 pb-2 last:border-0">
-              <div className="flex items-center gap-2">
-                <span className="text-amber-400 font-bold uppercase text-[11px]">
-                  Step {index + 1}: {log.action}
-                </span>
-              </div>
-              {log.query && (
-                <div className="text-blue-300 mt-1 font-mono bg-blue-950/40 p-2 rounded border border-blue-500/20 whitespace-pre-wrap break-all text-[11px]">
-                  {log.query}
-                </div>
-              )}
-              {log.observation && (
-                <pre className="text-emerald-400/90 mt-1 font-mono bg-black/40 p-2 rounded border border-emerald-500/20 whitespace-pre text-[10px] overflow-x-auto">
-                  {formatLogObservation(log.observation)}
-                </pre>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-};
 
 // Prompt template suggestions for the empty state
 const PROMPT_SUGGESTIONS = [
@@ -230,18 +175,12 @@ export const ChatView = ({ initialPrompt, onClearInitialPrompt }: ChatViewProps)
                               {msg.role === "user" ? (
                                 <p className="whitespace-pre-wrap break-words">{msg.text}</p>
                               ) : (
-                                /* AI: rendered markdown */
                                 <div
-                                  className="markdown-content"
+                                  className="markdown-content [&>h1]:text-2xl [&>h1]:font-bold [&>h1]:mb-4 [&>h2]:text-xl [&>h2]:font-bold [&>h2]:mb-3 [&>h3]:text-lg [&>h3]:font-semibold [&>h3]:mb-2 [&>h4]:text-base [&>h4]:font-semibold [&>h4]:mb-2 [&>p]:mb-3 last:[&>p]:mb-0 [&>ul]:list-disc [&>ul]:pl-5 [&>ul]:mb-3 [&>ol]:list-decimal [&>ol]:pl-5 [&>ol]:mb-3 [&>li]:mb-1 [&_strong]:font-bold [&_em]:italic"
                                   dangerouslySetInnerHTML={{
-                                    __html: markedInstance.parse(msg.text, { async: false }),
+                                    __html: markedInstance.parse(msg.text, { async: false }) as string,
                                   }}
                                 />
-                              )}
-
-                              {/* Collapsible agent logs */}
-                              {msg.logs && msg.logs.length > 0 && (
-                                <CollapsibleAgentLogs logs={msg.logs} />
                               )}
                             </div>
                           </div>
