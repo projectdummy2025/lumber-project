@@ -51,8 +51,8 @@ Rules:
 - Analyze feasibility against deadlines (e.g., 40 days) by comparing:
   a) Raw log (MAT-TEAK-LOG) path vs Kiln-dried (MAT-TEAK-DRY) stock path.
   b) Internal production vs Subcontracting / Overtime solutions.
-- When done, call finalize with your complete analysis and recommendation.
-- FORMATTING RULE: Structure your response cleanly into distinct sections using markdown headings (`### Title`), bold titles, and numbered lists (`1.`, `2.`). ALWAYS insert double newlines (`\n\n`) between every point, paragraph, and section so each point renders on its own separate line. NEVER merge multiple points or analysis steps into a single continuous block of text. NEVER use dashes or hyphens (`-` or `---`) to make lists or dividers. All responses MUST be in English."""
+- When you have gathered all the data you need, STOP calling tools and write your final analysis directly as a text message.
+- FORMATTING RULE: Structure your response cleanly into distinct sections using markdown headings (`### Title`), bold titles, and numbered lists (`1.`, `2.`). ALWAYS insert double newlines (`\\n\\n`) between every point, paragraph, and section so each point renders on its own separate line. NEVER merge multiple points or analysis steps into a single continuous block of text. NEVER use dashes or hyphens (`-` or `---`) to make lists or dividers. All responses MUST be in English."""
 
 SQL_TOOLS: list[dict[str, Any]] = [
     {
@@ -67,24 +67,7 @@ SQL_TOOLS: list[dict[str, Any]] = [
                     "thought_description": {"type": "string", "description": "A detailed explanation of your reasoning and what you hope to achieve with this query."},
                     "query": {"type": "string", "description": "SQL SELECT statement"},
                 },
-                "required": ["thought_title", "thought_description", "query"],
-                "additionalProperties": False,
-            },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "finalize",
-            "description": "Finish the analysis and deliver the final answer to the factory owner. Call this once all data has been gathered.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "thought_title": {"type": "string", "description": "A short, professional title indicating you are finalizing the report."},
-                    "thought_description": {"type": "string", "description": "A detailed explanation summarizing your overall findings before generating the final reply."},
-                    "reply": {"type": "string", "description": "The full final response to the user."},
-                },
-                "required": ["thought_title", "thought_description", "reply"],
+                "required": ["query"],
                 "additionalProperties": False,
             },
         },
@@ -96,7 +79,7 @@ def _client() -> OpenAI:
     kwargs: dict[str, Any] = {"base_url": os.environ["LLM_BASE_URL"]}
     if os.environ.get("LLM_API_KEY"):
         kwargs["api_key"] = os.environ["LLM_API_KEY"]
-    return OpenAI(**kwargs)
+    return OpenAI(**kwargs, timeout=290.0)
 
 
 def _execute_sql(query: str) -> str:
@@ -118,11 +101,26 @@ def _execute(logs: list[dict], role: str, content: str) -> dict:
     return entry
 
 
+def _parse_args(raw: str | None) -> dict:
+    """Tolerant JSON parse — handles truncated/malformed args from weak models."""
+    if not raw:
+        return {}
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError:
+        result = {}
+        for key in ("thought_title", "thought_description", "query"):
+            m = re.search(rf'"{key}"\s*:\s*"(.*?)(?:"|$)', raw, re.DOTALL)
+            if m:
+                result[key] = m.group(1)
+        return result
+
+
 def _chat(messages: list[dict], client: OpenAI, tools: list[dict] | None) -> dict:
     kw: dict[str, Any] = {"model": os.environ["LLM_MODEL"], "messages": messages}
     if tools:
         kw["tools"] = tools
-        kw["tool_choice"] = "required"
+        kw["tool_choice"] = "auto"
     resp = client.chat.completions.create(**kw)
     return resp.choices[0].message.model_dump(exclude_none=True)
 
@@ -135,37 +133,54 @@ def solve(message: str, client: OpenAI | None = None) -> tuple[str, list[dict]]:
     _execute(logs, "user", message)
 
     for _ in range(MAX_STEPS):
-        tool_calls = None
         try:
             msg = _chat(messages, client, SQL_TOOLS)
         except Exception as e:
             _execute(logs, "tool", f"LLM call failed: {e}")
             return "Error: cannot reach the LLM provider. Check configuration.", logs
+
         tool_calls = msg.get("tool_calls")
+
+        # No tool calls = model is done reasoning, this is the final answer
         if not tool_calls:
-            return msg.get("content") or "No reply from LLM.", logs
+            reply = msg.get("content") or ""
+            if reply.strip():
+                _execute(logs, "finalize", reply)
+                return reply, logs
+            # Empty content — ask model to give final answer without tools
+            messages.append(msg)
+            messages.append({"role": "user", "content": "Please provide your final analysis and recommendation now."})
+            try:
+                final = _chat(messages, client, None)  # no tools = force text reply
+                reply = final.get("content") or "No reply from LLM."
+                _execute(logs, "finalize", reply)
+                return reply, logs
+            except Exception as e:
+                return f"Error getting final answer: {e}", logs
+
         messages.append(msg)
         for call in tool_calls:
-            # some providers prefix tool names (e.g. "functions.execute_sql" or "functionsexecute_sql1")
             name = re.sub(r"^(function[s]?\.?|tool[s]?\.?)", "", call["function"]["name"]).rstrip("0123456789")
-            args = json.loads(call["function"]["arguments"] or "{}")
+            args = _parse_args(call["function"].get("arguments"))
 
             title = args.get("thought_title", "Processing")
             desc = args.get("thought_description", "Analyzing data...")
             _execute(logs, "thought", json.dumps({"title": title, "description": desc}))
 
-            if name == "finalize":
-                reply = args.get("reply") or "No reply provided."
-                _execute(logs, "finalize", reply)
-                return reply, logs
-            
-            if name != "execute_sql":
-                observation = f"Unknown tool: {name}"
-            else:
+            if name == "execute_sql":
                 observation = _execute_sql(args.get("query", ""))
-            
-            # The observation is only appended to messages for the LLM, not to logs for the UI
+            else:
+                observation = f"Unknown tool: {name}. Only execute_sql is available."
+
             messages.append({"role": "tool", "tool_call_id": call["id"], "content": observation})
 
-    _execute(logs, "finalize", "Max steps reached without a final answer.")
-    return "Analysis stopped after the maximum number of reasoning steps.", logs
+    # Exhausted steps — do one final call without tools to get whatever answer we can
+    messages.append({"role": "user", "content": "You have run out of steps. Please provide your final analysis now based on the data you have gathered."})
+    try:
+        final = _chat(messages, client, None)
+        reply = final.get("content") or "Analysis stopped after the maximum number of reasoning steps."
+        _execute(logs, "finalize", reply)
+        return reply, logs
+    except Exception:
+        _execute(logs, "finalize", "Max steps reached without a final answer.")
+        return "Analysis stopped after the maximum number of reasoning steps.", logs
